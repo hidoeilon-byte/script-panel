@@ -177,10 +177,20 @@
               if (x.status !== "succeeded") return res(null);
               var doc = new DOMParser().parseFromString(x.value, "text/xml");
               var root = doc.documentElement;
-              var items = Array.prototype.map.call(root.getElementsByTagName("c"), function (c) {
+              var dEl = root.getElementsByTagName("d")[0];
+              if (dEl) {
+                var lines = dEl.textContent.split("\n");
+                var h = lines[0].split("|");
+                var items = lines.slice(1).filter(Boolean).map(function (ln) {
+                  var p = ln.split("|");
+                  return { i: +p[0], pos: +p[1], text: p.slice(2).join("|") };
+                });
+                return res({ vs: +h[0], last: +h[1], n: +h[2], stamp: h[3], items: items });
+              }
+              var items2 = Array.prototype.map.call(root.getElementsByTagName("c"), function (c) {
                 return { i: +c.getAttribute("i"), pos: +c.getAttribute("pos"), text: c.textContent };
               });
-              res({ vs: +root.getAttribute("vs"), last: +root.getAttribute("last"), n: +root.getAttribute("n"), stamp: root.getAttribute("stamp"), items: items });
+              res({ vs: +root.getAttribute("vs"), last: +root.getAttribute("last"), n: +root.getAttribute("n"), stamp: root.getAttribute("stamp"), items: items2 });
             });
           });
         } catch (e) { res(null); }
