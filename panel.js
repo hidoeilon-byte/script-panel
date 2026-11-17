@@ -184,15 +184,9 @@
     var s = scenes[i];
     var chips = (s.p || []).map(function (id) { var p = plotById(id); return p ? chip(p, " sm") : ""; }).join("");
     var handle = filter ? "" : '<span class="hd" data-i="' + i + '" title="גרור כדי להזיז">⋮⋮</span>';
-    var main;
-    if (view === "struct") {
-      main = '<button class="go" data-i="' + i + '"><span class="num">' + (i + 1) + '.</span> ' +
-        (s.s ? esc(s.s) : '<span class="muted">' + esc(s.h || "(כותרת ריקה)") + '</span>') + '</button>';
-    } else {
-      main = '<button class="go" data-i="' + i + '"><span class="num">' + (i + 1) + '.</span> <b>' + esc(s.h || "(כותרת ריקה)") + '</b></button>';
-    }
+    var main = '<button class="go" data-i="' + i + '"><span class="num">' + (i + 1) + '.</span> <b>' + esc(s.h || "(כותרת ריקה)") + '</b></button>';
     var syn = "";
-    if (view === "heads" && showSyn && editing !== i) {
+    if ((view === "struct" || showSyn) && editing !== i) {
       syn = s.s ? '<div class="syn">' + esc(s.s) + '</div>' : (s.preview ? '<div class="syn pv">' + esc(s.preview) + '</div>' : "");
     }
     return '<div class="scene' + (i === curScene ? " cur" : "") + (editing === i ? " open" : "") + '" data-i="' + i + '">' +

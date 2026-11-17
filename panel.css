@@ -88,7 +88,7 @@ header { padding: 10px 10px 8px; border-bottom: 1px solid var(--line); }
 .tog:hover { background: var(--line); color: var(--ink); }
 .syn {
   color: var(--ink); font-size: 12px; padding: 0 2px 0 4px;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 .syn.pv { color: var(--muted); font-style: italic; }
 .ed {
@@ -137,7 +137,7 @@ header { padding: 10px 10px 8px; border-bottom: 1px solid var(--line); }
 .scene.dragging { opacity: .45; }
 .dropline { position: absolute; left: 8px; right: 8px; height: 3px; background: var(--accent); border-radius: 2px; pointer-events: none; z-index: 5; }
 .go b { font-weight: 600; }
-.view-struct .go, .go .muted { font-weight: 400; }
+.go .muted { font-weight: 400; }
 .muted { color: var(--muted); }
 .chips { display: flex; flex-wrap: wrap; gap: 3px; padding: 2px 22px 0 4px; }
 .seq { display: flex; align-items: center; gap: 4px; margin: 8px 0 4px; padding: 5px 8px; background: var(--line); border-radius: 6px; font-weight: 700; font-size: 12.5px; cursor: pointer; user-select: none; }
