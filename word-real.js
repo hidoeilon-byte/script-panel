@@ -120,6 +120,41 @@
       });
     },
 
+    // {style, text} of the cursor paragraph (cheap, for polling)
+    curPara: function () {
+      return run(function (ctx) {
+        var p = ctx.document.getSelection().paragraphs.getFirst();
+        p.load("style,text");
+        return ctx.sync().then(function () { return { style: p.style, text: p.text }; });
+      });
+    },
+
+    // Wrap the cursor paragraph in round brackets; empty -> "()" with cursor inside
+    wrapParen: function () {
+      return run(function (ctx) {
+        var p = ctx.document.getSelection().paragraphs.getFirst();
+        p.load("text");
+        return ctx.sync().then(function () {
+          var t = p.text.trim();
+          if (t === "") {
+            p.insertText("()", "Start");
+            return ctx.sync().then(function () {
+              var r = p.search("(", { matchCase: true }).getFirst();
+              r.getRange("End").select();
+              return ctx.sync();
+            });
+          }
+          if (t.charAt(0) !== "(") p.insertText("(", "Start");
+          if (t.charAt(t.length - 1) !== ")") p.insertText(")", "End");
+          return ctx.sync().then(function () {
+            var r = p.search(")", { matchCase: true }).getLast();
+            r.getRange("Start").select();
+            return ctx.sync();
+          });
+        });
+      });
+    },
+
     loadData: function () {
       try {
         var st = Office.context.document.settings;

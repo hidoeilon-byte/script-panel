@@ -1,12 +1,14 @@
 // Scene panel UI. Talks to Word only through window.WordBridge.
 (function () {
   var SCENE = "כותרת סצנה";
+  var PAREN = "הערת בימוי";
+  var lastPara = null;
   var STYLES = [
-    { name: "כותרת סצנה", label: "סצנה", key: "1" },
-    { name: "תיאור", label: "תיאור", key: "2" },
-    { name: "דמות", label: "דמות", key: "3" },
-    { name: "דיאלוג", label: "דיאלוג", key: "4" },
-    { name: "הערת בימוי", label: "הערה", key: "5" }
+    { name: "כותרת סצנה", label: "סצנה", key: "S" },
+    { name: "תיאור", label: "תיאור", key: "T" },
+    { name: "דמות", label: "דמות", key: "D" },
+    { name: "דיאלוג", label: "דיאלוג", key: "Z" },
+    { name: "הערת בימוי", label: "הערה", key: "H" }
   ];
   var COLORS = ["#c9b8f0", "#f4a3a3", "#f7e17a", "#9fe0a5", "#8fe3ea", "#f2a6e3", "#f8c48c", "#a9c8f5", "#d5d0c4"];
 
@@ -98,13 +100,16 @@
   function buildStyleButtons() {
     var box = $("styles");
     box.innerHTML = STYLES.map(function (s) {
-      return '<button class="sbtn" data-style="' + esc(s.name) + '" title="' + esc(s.name) + '  ⌃⌥' + s.key + '">' +
-        '<span class="sl">' + esc(s.label) + '</span><span class="sk">⌃⌥' + s.key + '</span></button>';
+      return '<button class="sbtn" data-style="' + esc(s.name) + '" title="' + esc(s.name) + '  ⌥' + s.key + '">' +
+        '<span class="sl">' + esc(s.label) + '</span><span class="sk">⌥' + s.key + '</span></button>';
     }).join("");
     box.addEventListener("click", function (e) {
       var b = e.target.closest(".sbtn");
       if (!b) return;
-      W.applyStyle(b.dataset.style).then(function () { refreshCursor(); refreshScenes(); }).catch(showErr);
+      var st = b.dataset.style;
+      W.applyStyle(st).then(function () {
+        if (st === PAREN) { lastPara = { style: PAREN, text: "" }; return W.wrapParen(); }
+      }).then(function () { refreshCursor(); refreshScenes(); }).catch(showErr);
     });
   }
 
@@ -242,7 +247,7 @@
     var list = $("scenes");
     list.className = view === "struct" ? "view-struct" : "";
     if (!scenes.length) {
-      list.innerHTML = '<div class="empty">אין עדיין סצנות.<br>כותרת סצנה חדשה: ⌃⌥1</div>';
+      list.innerHTML = '<div class="empty">אין עדיין סצנות.<br>כותרת סצנה חדשה: ⌥S</div>';
       return;
     }
     var visible = function (i) {
@@ -513,6 +518,26 @@
     list.addEventListener("pointercancel", function () { target = -1; end(); });
   }
 
+  // ---------- auto brackets for parentheticals
+  // When a paragraph turns into "הערת בימוי" (shortcut or button), wrap it in ( ).
+  var wrapping = false;
+  function pollParen() {
+    if (wrapping || busy || !W.curPara) return;
+    W.curPara().then(function (c) {
+      var prev = lastPara;
+      lastPara = c;
+      if (!prev || c.style !== PAREN || prev.style === PAREN) return;
+      var t = c.text.trim();
+      var inPlace = prev.text === c.text;           // style changed on the same paragraph
+      if (t === "" || (inPlace && (t.charAt(0) !== "(" || t.charAt(t.length - 1) !== ")"))) {
+        wrapping = true;
+        return W.wrapParen().then(function () {
+          return W.curPara().then(function (c2) { lastPara = c2; });
+        }).catch(function () {}).then(function () { wrapping = false; });
+      }
+    }).catch(function () {});
+  }
+
   // ---------- cursor
   var cT;
   function refreshCursor() {
@@ -535,6 +560,7 @@
     buildStyleButtons();
     wire();
     W.onSelectionChange(onSel);
+    setInterval(function () { if (!document.hidden) pollParen(); }, 700);
     refreshScenes().then(refreshCursor);
     setInterval(function () {
       if (document.hidden || editing >= 0) return;
