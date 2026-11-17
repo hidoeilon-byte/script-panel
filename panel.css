@@ -171,3 +171,20 @@ header { padding: 10px 10px 8px; border-bottom: 1px solid var(--line); }
 .pick.none { background: var(--card); color: var(--ink); border-style: dashed; }
 
 .tabhint { color: var(--muted); }
+
+/* ---- v4: location bank */
+#locbox { margin: 0 10px 6px; padding: 8px; background: var(--card); border: 1px solid var(--accent); border-radius: 8px; }
+.lochead { display: flex; align-items: center; gap: 6px; font-size: 12.5px; }
+.lochead .sp { flex: 1; }
+.lochint { font-size: 11.5px; color: var(--muted); margin: 6px 0 4px; }
+.locbtns, .loclist { display: flex; flex-wrap: wrap; gap: 4px; }
+.lb, .li { font: inherit; font-size: 12.5px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 6px; padding: 3px 9px; cursor: pointer; }
+.lb:hover, .li:hover { border-color: var(--accent); }
+.lb.on { background: var(--on); color: var(--on-ink); border-color: var(--on); }
+.li small { color: var(--muted); }
+.lb.add { margin-top: 6px; border-style: dashed; }
+.locman { margin-top: 8px; border-top: 1px solid var(--line); padding-top: 6px; max-height: 180px; overflow-y: auto; }
+.lmrow { display: flex; align-items: center; gap: 6px; font-size: 12px; padding: 2px 0; }
+.lmrow span { flex: 1; }
+.lmrow small { color: var(--muted); }
+.newloc { width: 100%; margin-top: 6px; font: inherit; font-size: 12.5px; border: 1px dashed var(--line); border-radius: 4px; padding: 3px 6px; background: var(--card); color: var(--ink); }

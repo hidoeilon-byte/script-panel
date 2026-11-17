@@ -129,6 +129,16 @@
       });
     },
 
+    // Replace the text of the cursor paragraph (keeps its style) and put the cursor at the end
+    setParaText: function (t) {
+      return run(function (ctx) {
+        var p = ctx.document.getSelection().paragraphs.getFirst();
+        var r = p.insertText(t, "Replace");
+        r.getRange("End").select();
+        return ctx.sync();
+      });
+    },
+
     // Wrap the cursor paragraph in round brackets; empty -> "()" with cursor inside
     wrapParen: function () {
       return run(function (ctx) {

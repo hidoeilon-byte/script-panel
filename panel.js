@@ -3,6 +3,8 @@
   var SCENE = "כותרת סצנה";
   var PAREN = "הערת בימוי";
   var lastPara = null;
+  var customLocs = [];   // locations added by hand
+  var locOpen = false;   // bank manager open
   var STYLES = [
     { name: "כותרת סצנה", label: "סצנה", key: "S" },
     { name: "תיאור", label: "תיאור", key: "T" },
@@ -47,12 +49,13 @@
 
   // ---------- data
   function persist() {
-    var any = plots.length || scenes.some(function (s) { return s.s || s.q || s.m || (s.p && s.p.length); });
+    var any = plots.length || customLocs.length || scenes.some(function (s) { return s.s || s.q || s.m || (s.p && s.p.length); });
     if (!any && !W.loadData()) return;
     W.saveData({
       v: 2,
       plots: plots,
       marks: marks,
+      locs: customLocs,
       scenes: scenes.map(function (s) { return { h: s.h, s: s.s, q: s.q, p: s.p, m: s.m || "" }; })
     });
   }
@@ -78,6 +81,7 @@
         var d = W.loadData() || { scenes: [], plots: [] };
         plots = d.plots || [];
         if (d.marks && d.marks.length) marks = d.marks;
+        customLocs = d.locs || [];
         old = d.scenes || [];
         loaded = true;
       } else {
@@ -100,8 +104,8 @@
   function buildStyleButtons() {
     var box = $("styles");
     box.innerHTML = STYLES.map(function (s) {
-      return '<button class="sbtn" data-style="' + esc(s.name) + '" title="' + esc(s.name) + '  ⌥' + s.key + '">' +
-        '<span class="sl">' + esc(s.label) + '</span><span class="sk">⌥' + s.key + '</span></button>';
+      return '<button class="sbtn" data-style="' + esc(s.name) + '" title="' + esc(s.name) + '">' +
+        '<span class="sl">' + esc(s.label) + '</span></button>';
     }).join("");
     box.addEventListener("click", function (e) {
       var b = e.target.closest(".sbtn");
@@ -247,7 +251,7 @@
     var list = $("scenes");
     list.className = view === "struct" ? "view-struct" : "";
     if (!scenes.length) {
-      list.innerHTML = '<div class="empty">אין עדיין סצנות.<br>כותרת סצנה חדשה: ⌥S</div>';
+      list.innerHTML = '<div class="empty">אין עדיין סצנות.<br>כותרת סצנה חדשה: Tab עד שמגיעים לסצנה</div>';
       return;
     }
     var visible = function (i) {
@@ -526,6 +530,7 @@
     W.curPara().then(function (c) {
       var prev = lastPara;
       lastPara = c;
+      updateLocBox(c);
       if (!prev || c.style !== PAREN || prev.style === PAREN) return;
       var t = c.text.trim();
       var inPlace = prev.text === c.text;           // style changed on the same paragraph
@@ -536,6 +541,118 @@
         }).catch(function () {}).then(function () { wrapping = false; });
       }
     }).catch(function () {});
+  }
+
+  // ---------- location bank
+  var TYPES = ["פנים", "חוץ", "פנים/חוץ"];
+  var TIMES = ["יום", "לילה", "בוקר", "צהריים", "אחר הצהריים", "ערב", "שחר"];
+  var HEAD_RE = /^(פנים\/חוץ|פנים|חוץ)\.?\s*(.*)$/;
+
+  function parseHead(t) {
+    t = (t || "").trim();
+    var m = HEAD_RE.exec(t);
+    if (!m) return { type: "", loc: t, time: "", hasDash: false };
+    var rest = m[2], loc = rest, time = "", dash = false;
+    var k = rest.search(/\s[–-]\s?|[–]/);
+    if (k >= 0) {
+      dash = true;
+      loc = rest.slice(0, k);
+      time = rest.slice(k).replace(/^\s*[–-]\s*/, "");
+    }
+    return { type: m[1], loc: loc.trim(), time: time.trim(), hasDash: dash };
+  }
+
+  function locBank() {
+    var count = {};
+    scenes.forEach(function (sc) {
+      var p = parseHead(sc.h);
+      var l = p.loc.replace(/\s*\(.*\)\s*$/, "").trim();
+      if (p.type && l) count[l] = (count[l] || 0) + 1;
+    });
+    customLocs.forEach(function (l) { if (!(l in count)) count[l] = 0; });
+    return Object.keys(count).sort(function (a, b) { return count[b] - count[a] || a.localeCompare(b, "he"); })
+      .map(function (l) { return { n: l, c: count[l], custom: customLocs.indexOf(l) >= 0 }; });
+  }
+
+  var locSig = "";
+  function updateLocBox(c) {
+    var box = $("locbox");
+    if (!box) return;
+    if (!c || c.style !== SCENE) {
+      if (!locOpen) { box.hidden = true; box.innerHTML = ""; locSig = ""; }
+      return;
+    }
+    var sig = c.text + "|" + locOpen + "|" + customLocs.length + "|" + scenes.length;
+    if (sig === locSig && !box.hidden) return;
+    locSig = sig;
+    box.hidden = false;
+    var p = parseHead(c.text);
+    var bank = locBank();
+    var html = '<div class="lochead"><b>כותרת סצנה</b><span class="sp"></span>' +
+      '<button class="icon" id="locmanage" title="בנק לוקיישנים">' + (locOpen ? "▴" : "☰") + ' ' + bank.length + '</button></div>';
+    if (!p.type) {
+      html += '<div class="lochint">מתחילים ב:</div><div class="locbtns">' + TYPES.map(function (t) {
+        return '<button class="lb" data-type="' + esc(t) + '">' + esc(t) + '.</button>';
+      }).join("") + '</div>';
+    } else if (!p.hasDash) {
+      var f = p.loc;
+      var list = bank.filter(function (l) { return !f || l.n.indexOf(f) >= 0; }).slice(0, 12);
+      html += '<div class="lochint">' + (f ? 'לוקיישנים שמתאימים ל"' + esc(f) + '":' : 'בחר לוקיישן או המשך להקליד:') + '</div>';
+      html += '<div class="loclist">' + (list.length ? list.map(function (l) {
+        return '<button class="li" data-loc="' + esc(l.n) + '">' + esc(l.n) + (l.c ? ' <small>' + l.c + '</small>' : '') + '</button>';
+      }).join("") : '<span class="lochint">אין לוקיישן כזה בבנק עדיין.</span>') + '</div>';
+      if (f && !bank.some(function (l) { return l.n === f; })) {
+        html += '<button class="lb add" data-addloc="' + esc(f) + '">+ הוסף "' + esc(f) + '" לבנק</button>';
+      }
+    } else {
+      html += '<div class="lochint">זמן:</div><div class="locbtns">' + TIMES.map(function (t) {
+        return '<button class="lb' + (p.time === t ? " on" : "") + '" data-time="' + esc(t) + '">' + esc(t) + '</button>';
+      }).join("") + '</div>';
+    }
+    if (locOpen) {
+      html += '<div class="locman">' + bank.map(function (l) {
+        return '<div class="lmrow"><span>' + esc(l.n) + '</span><small>' + (l.c ? l.c + " סצנות" : "ידני") + '</small>' +
+          (l.custom ? '<button class="icon" data-delloc="' + esc(l.n) + '" title="הסר מהבנק">✕</button>' : '') + '</div>';
+      }).join("") + '<input class="newloc" placeholder="+ לוקיישן חדש לבנק (Enter)"></div>';
+    }
+    box.innerHTML = html;
+  }
+
+  function setHead(type, loc, time) {
+    var t = type + ". " + (loc || "");
+    if (time !== undefined) t += " – " + time;
+    else if (loc) t += " – ";
+    return W.setParaText(t).then(function () { locSig = ""; return W.curPara().then(updateLocBox); }).catch(showErr);
+  }
+
+  function wireLoc() {
+    var box = $("locbox");
+    if (!box) return;
+    box.addEventListener("click", function (e) {
+      var c = lastPara || { text: "" };
+      var p = parseHead(c.text);
+      var b;
+      if ((b = e.target.closest("[data-type]"))) { W.setParaText(b.dataset.type + ". ").then(function () { locSig = ""; return W.curPara().then(updateLocBox); }).catch(showErr); return; }
+      if ((b = e.target.closest("[data-loc]"))) { setHead(p.type, b.dataset.loc); return; }
+      if ((b = e.target.closest("[data-time]"))) { setHead(p.type, p.loc, b.dataset.time); return; }
+      if ((b = e.target.closest("[data-addloc]"))) {
+        if (customLocs.indexOf(b.dataset.addloc) < 0) customLocs.push(b.dataset.addloc);
+        persist(); setHead(p.type, b.dataset.addloc); return;
+      }
+      if ((b = e.target.closest("[data-delloc]"))) {
+        customLocs = customLocs.filter(function (x) { return x !== b.dataset.delloc; });
+        persist(); locSig = ""; updateLocBox(lastPara); return;
+      }
+      if (e.target.closest("#locmanage")) { locOpen = !locOpen; locSig = ""; updateLocBox(lastPara && lastPara.style === SCENE ? lastPara : { style: SCENE, text: "" }); }
+    });
+    box.addEventListener("keydown", function (e) {
+      if (e.target.classList.contains("newloc") && e.key === "Enter" && e.target.value.trim()) {
+        var v = e.target.value.trim();
+        if (customLocs.indexOf(v) < 0) customLocs.push(v);
+        persist(); locSig = ""; updateLocBox(lastPara && lastPara.style === SCENE ? lastPara : { style: SCENE, text: "" });
+        var n = document.querySelector(".newloc"); if (n) n.focus();
+      }
+    });
   }
 
   // ---------- cursor
@@ -559,6 +676,7 @@
   W.ready().then(function () {
     buildStyleButtons();
     wire();
+    wireLoc();
     W.onSelectionChange(onSel);
     setInterval(function () { if (!document.hidden) pollParen(); }, 700);
     refreshScenes().then(refreshCursor);
