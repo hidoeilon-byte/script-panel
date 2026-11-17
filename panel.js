@@ -13,6 +13,15 @@
   var W = window.WordBridge;
   var scenes = [];      // [{h, s, q, p:[plotId], preview}]
   var plots = [];       // [{id, n, c}]
+  var DEFAULT_MARKS = [
+    { id: "m1", n: "לשכתב", c: "#f4a3a3" },
+    { id: "m2", n: "לבדוק", c: "#f7e17a" },
+    { id: "m3", n: "מוכן", c: "#9fe0a5" }
+  ];
+  var marks = DEFAULT_MARKS.slice();   // scene color marks [{id, n, c}]
+  var mfilter = null;   // mark id
+  var picking = -1;     // scene index with open color picker
+  var mmanage = false;
   var loaded = false;
   var curScene = -1;
   var editing = -1;
@@ -26,6 +35,7 @@
 
   function $(id) { return document.getElementById(id); }
   function esc(t) { return String(t == null ? "" : t).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function markById(id) { for (var i = 0; i < marks.length; i++) if (marks[i].id === id) return marks[i]; return null; }
   function plotById(id) { for (var i = 0; i < plots.length; i++) if (plots[i].id === id) return plots[i]; return null; }
   function lsGet(k, d) { try { var v = localStorage.getItem(k); return v == null ? d : v; } catch (e) { return d; } }
   function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
@@ -35,12 +45,13 @@
 
   // ---------- data
   function persist() {
-    var any = plots.length || scenes.some(function (s) { return s.s || s.q || (s.p && s.p.length); });
+    var any = plots.length || scenes.some(function (s) { return s.s || s.q || s.m || (s.p && s.p.length); });
     if (!any && !W.loadData()) return;
     W.saveData({
       v: 2,
       plots: plots,
-      scenes: scenes.map(function (s) { return { h: s.h, s: s.s, q: s.q, p: s.p }; })
+      marks: marks,
+      scenes: scenes.map(function (s) { return { h: s.h, s: s.s, q: s.q, p: s.p, m: s.m || "" }; })
     });
   }
 
@@ -64,6 +75,7 @@
       if (!loaded) {
         var d = W.loadData() || { scenes: [], plots: [] };
         plots = d.plots || [];
+        if (d.marks && d.marks.length) marks = d.marks;
         old = d.scenes || [];
         loaded = true;
       } else {
@@ -74,7 +86,7 @@
         heads.some(function (h, i) { return !old[i] || old[i].h !== h; });
       scenes = heads.map(function (h, i) {
         var o = map[i] >= 0 ? old[map[i]] : null;
-        return { h: h, s: o ? o.s || "" : "", q: o ? o.q || "" : "", p: o ? (o.p || []).slice() : [], preview: previews[i] };
+        return { h: h, s: o ? o.s || "" : "", q: o ? o.q || "" : "", p: o ? (o.p || []).slice() : [], m: o ? o.m || "" : "", preview: previews[i] };
       });
       if (changed && sig) { editing = -1; persist(); }
       sig = newSig;
@@ -121,7 +133,28 @@
       '<button class="icon" id="refresh" title="רענון" aria-label="רענון">↻</button>';
   }
 
+  function renderMarkBar() {
+    var mc = {};
+    scenes.forEach(function (s) { if (s.m) mc[s.m] = (mc[s.m] || 0) + 1; });
+    var html = '<div class="plots marks"><span class="lbl">צבע:</span>' + marks.map(function (m) {
+      return '<span class="chip big' + (mfilter === m.id ? " sel" : "") + (mfilter && mfilter !== m.id ? " dim" : "") +
+        '" data-mfilter="' + esc(m.id) + '" style="background:' + m.c + '" title="הצג רק סצנות בצבע הזה">' +
+        esc(m.n) + ' <small>' + (mc[m.id] || 0) + '</small></span>';
+    }).join("") + '<button class="icon" id="mmanage" title="ניהול צבעים">⚙</button></div>';
+    if (mfilter) html += '<div class="fnote">מוצגות רק סצנות "' + esc((markById(mfilter) || {}).n) + '" · <a href="#" id="clearm">הצג הכל</a></div>';
+    if (mmanage) {
+      html += '<div class="manage">' + marks.map(function (m) {
+        return '<div class="mrow" data-mid="' + esc(m.id) + '">' +
+          '<button class="swatch mswatch" style="background:' + m.c + '" title="החלף צבע"></button>' +
+          '<input class="mname mmname" value="' + esc(m.n) + '">' +
+          '<button class="icon mmdel" title="מחק צבע">✕</button></div>';
+      }).join("") + '<div class="mrow"><input class="mname mnew" placeholder="+ צבע חדש (שם ו-Enter)"></div></div>';
+    }
+    $("markbar").innerHTML = html;
+  }
+
   function renderPlotBar() {
+    renderMarkBar();
     var box = $("plotbar");
     if (!plots.length && view !== "struct") { box.innerHTML = ""; box.hidden = true; return; }
     box.hidden = false;
@@ -183,16 +216,23 @@
   function sceneHtml(i) {
     var s = scenes[i];
     var chips = (s.p || []).map(function (id) { var p = plotById(id); return p ? chip(p, " sm") : ""; }).join("");
-    var handle = filter ? "" : '<span class="hd" data-i="' + i + '" title="גרור כדי להזיז">⋮⋮</span>';
+    var handle = (filter || mfilter) ? "" : '<span class="hd" data-i="' + i + '" title="גרור כדי להזיז">⋮⋮</span>';
     var main = '<button class="go" data-i="' + i + '"><span class="num">' + (i + 1) + '.</span> <b>' + esc(s.h || "(כותרת ריקה)") + '</b></button>';
     var syn = "";
     if ((view === "struct" || showSyn) && editing !== i) {
       syn = s.s ? '<div class="syn">' + esc(s.s) + '</div>' : (s.preview ? '<div class="syn pv">' + esc(s.preview) + '</div>' : "");
     }
-    return '<div class="scene' + (i === curScene ? " cur" : "") + (editing === i ? " open" : "") + '" data-i="' + i + '">' +
-      '<div class="row">' + handle + main +
+    var mk = s.m ? markById(s.m) : null;
+    var dot = '<button class="dot' + (mk ? "" : " empty") + '" data-i="' + i + '" title="' + (mk ? esc(mk.n) : "סימון בצבע") + '"' +
+      (mk ? ' style="background:' + mk.c + '"' : "") + '></button>';
+    var picker = picking === i ? '<div class="markpick">' + marks.map(function (m) {
+      return '<button class="pick' + (s.m === m.id ? " on" : "") + '" data-m="' + esc(m.id) + '" style="background:' + m.c + '">' + esc(m.n) + '</button>';
+    }).join("") + '<button class="pick none" data-m="">ללא</button></div>' : "";
+    return '<div class="scene' + (i === curScene ? " cur" : "") + (editing === i ? " open" : "") + (mk ? " marked" : "") + '" data-i="' + i + '"' +
+      (mk ? ' style="--mk:' + mk.c + '"' : "") + '>' +
+      '<div class="row">' + handle + main + dot +
         '<button class="tog" data-i="' + i + '" title="תקציר, עלילות וסיקוונס">' + (editing === i ? "▴" : "✎") + '</button>' +
-      '</div>' + syn +
+      '</div>' + picker + syn +
       (chips && editing !== i ? '<div class="chips">' + chips + '</div>' : "") +
       (editing === i ? editorHtml(i) : "") +
     '</div>';
@@ -205,7 +245,10 @@
       list.innerHTML = '<div class="empty">אין עדיין סצנות.<br>כותרת סצנה חדשה: ⌃⌥1</div>';
       return;
     }
-    var visible = function (i) { return !filter || scenes[i].p.indexOf(filter) >= 0 || editing === i; };
+    var visible = function (i) {
+      if (editing === i) return true;
+      return (!filter || scenes[i].p.indexOf(filter) >= 0) && (!mfilter || scenes[i].m === mfilter);
+    };
     var html = "";
     if (view === "struct") {
       var seqs = sequences(), n = 0;
@@ -299,6 +342,41 @@
       if (e.target.id === "showsyn") { showSyn = e.target.checked; lsSet("showSyn", showSyn ? "1" : "0"); renderList(); }
     });
 
+    var mb = $("markbar");
+    mb.addEventListener("click", function (e) {
+      var f = e.target.closest("[data-mfilter]");
+      if (f) { mfilter = mfilter === f.dataset.mfilter ? null : f.dataset.mfilter; editing = -1; render(); return; }
+      if (e.target.closest("#clearm")) { e.preventDefault(); mfilter = null; render(); return; }
+      if (e.target.closest("#mmanage")) { mmanage = !mmanage; renderMarkBar(); return; }
+      var sw = e.target.closest(".mswatch");
+      if (sw) {
+        var m = markById(sw.closest(".mrow").dataset.mid);
+        m.c = COLORS[(COLORS.indexOf(m.c) + 1) % COLORS.length];
+        persist(); render(); return;
+      }
+      var del = e.target.closest(".mmdel");
+      if (del) {
+        var id = del.closest(".mrow").dataset.mid, mm = markById(id);
+        if (!confirm('למחוק את הצבע "' + mm.n + '"? הוא יוסר מכל הסצנות.')) return;
+        marks = marks.filter(function (x) { return x.id !== id; });
+        scenes.forEach(function (s) { if (s.m === id) s.m = ""; });
+        if (mfilter === id) mfilter = null;
+        persist(); render();
+      }
+    });
+    mb.addEventListener("change", function (e) {
+      if (e.target.classList.contains("mmname") && e.target.value.trim()) {
+        markById(e.target.closest(".mrow").dataset.mid).n = e.target.value.trim(); persist(); render();
+      }
+    });
+    mb.addEventListener("keydown", function (e) {
+      if (e.target.classList.contains("mnew") && e.key === "Enter" && e.target.value.trim()) {
+        marks.push({ id: "m" + Date.now().toString(36), n: e.target.value.trim(), c: COLORS[marks.length % COLORS.length] });
+        persist(); render();
+        var nn = document.querySelector(".mnew"); if (nn) nn.focus();
+      }
+    });
+
     var pb = $("plotbar");
     pb.addEventListener("click", function (e) {
       var f = e.target.closest("[data-filter]");
@@ -332,6 +410,10 @@
     list.addEventListener("click", function (e) {
       var go = e.target.closest(".go");
       if (go) { var i = +go.dataset.i; markCurrent(i); W.goToScene(i).catch(showErr); return; }
+      var dt = e.target.closest(".dot");
+      if (dt) { var di = +dt.dataset.i; picking = picking === di ? -1 : di; renderList(); return; }
+      var pk = e.target.closest(".pick");
+      if (pk && picking >= 0) { scenes[picking].m = pk.dataset.m; picking = -1; persist(); renderPlotBar(); renderList(); return; }
       var tog = e.target.closest(".tog");
       if (tog) { var j = +tog.dataset.i; editing = editing === j ? -1 : j; renderList(); focusEditor(); return; }
       var seq = e.target.closest(".seq[data-start]");
