@@ -101,19 +101,42 @@
   }
 
   // ---------- style buttons
+  // same order as Tab in the Word add-in (CycleType)
+  var CYCLE = ["תיאור", "דמות", "דיאלוג", "הערת בימוי", "כותרת סצנה"];
+  var IOS = false;   // set after Office.onReady
+
+  function setType(st) {
+    return W.applyStyle(st).then(function () {
+      if (st === PAREN) { lastPara = { style: PAREN, text: "" }; return W.wrapParen(); }
+    }).then(function () { refreshCursor(); refreshScenes(); }).catch(showErr);
+  }
+
+  function cycleType(dir) {
+    return W.cursor().then(function (c) {
+      var k = CYCLE.indexOf(c.style);
+      var n = k < 0 ? (dir > 0 ? 0 : CYCLE.length - 1) : (k + dir + CYCLE.length) % CYCLE.length;
+      return setType(CYCLE[n]);
+    }).catch(showErr);
+  }
+
   function buildStyleButtons() {
+    try { IOS = Office.context.platform === Office.PlatformType.iOS; } catch (e) {}
     var box = $("styles");
     box.innerHTML = STYLES.map(function (s) {
       return '<button class="sbtn" data-style="' + esc(s.name) + '" title="' + esc(s.name) + '">' +
-        '<span class="sl">' + esc(s.label) + '</span><span class="sk">' + s.key + '</span></button>';
-    }).join("");
+        '<span class="sl">' + esc(s.label) + '</span>' + (IOS ? "" : '<span class="sk">' + s.key + '</span>') + '</button>';
+    }).join("") +
+      '<button class="sbtn cyc" data-dir="-1" title="סוג השורה הקודם (Shift+Tab)"><span class="sl">⇤ סוג קודם</span></button>' +
+      '<button class="sbtn cyc" data-dir="1" title="סוג השורה הבא (Tab)"><span class="sl">סוג הבא ⇥</span></button>';
+    if (IOS) {
+      var hint = document.querySelector(".tabhint");
+      if (hint) hint.textContent = "סוג הבא מחליף סוג שורה";
+    }
     box.addEventListener("click", function (e) {
       var b = e.target.closest(".sbtn");
       if (!b) return;
-      var st = b.dataset.style;
-      W.applyStyle(st).then(function () {
-        if (st === PAREN) { lastPara = { style: PAREN, text: "" }; return W.wrapParen(); }
-      }).then(function () { refreshCursor(); refreshScenes(); }).catch(showErr);
+      if (b.dataset.dir) { cycleType(+b.dataset.dir); return; }
+      setType(b.dataset.style);
     });
   }
 
