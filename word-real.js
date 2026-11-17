@@ -170,8 +170,10 @@
       return new Promise(function (res) {
         try {
           Office.context.document.customXmlParts.getByNamespaceAsync("urn:scripttool:chg", function (r) {
+            window.CHGDBG = "ns:" + r.status + " n=" + (r.value ? r.value.length : "-") + (r.error ? " " + r.error.message : "");
             if (r.status !== "succeeded" || !r.value || !r.value.length) return res(null);
             r.value[r.value.length - 1].getXmlAsync(function (x) {
+              window.CHGDBG += " xml:" + x.status + (x.error ? " " + x.error.message : "") + " len=" + (x.value ? x.value.length : 0);
               if (x.status !== "succeeded") return res(null);
               var doc = new DOMParser().parseFromString(x.value, "text/xml");
               var root = doc.documentElement;

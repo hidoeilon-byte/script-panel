@@ -261,7 +261,8 @@
       '<div class="chgrow"><span>מול</span><select id="chgdraft">' + (opts || '<option>טוען…</option>') + '</select>' +
       '<button class="lb on" id="chgshow">הצג שינויים</button><button class="lb" id="chghide">הסתר</button></div>' +
       '<div class="chgrow"><button class="lb" id="chgprev" title="F6">▲ הקודם</button><button class="lb" id="chgnext" title="F7">▼ הבא</button>' +
-      '<span class="chgstat">' + (chgPending ? "מעבד…" : (chg && chg.n > 0 ? chg.n + " שינויים מול דראפט " + vs : (chg ? "אין שינויים מוצגים" : ""))) + '</span></div></div>';
+      '<span class="chgstat">' + (chgPending ? "מעבד…" : (chg && chg.n > 0 ? chg.n + " שינויים מול דראפט " + vs : (chg ? "אין שינויים מוצגים" : ""))) + '</span></div>' +
+      (window.CHGDBG && (!chg || !chg.last) ? '<div class="chgstat" style="direction:ltr">' + esc(window.CHGDBG) + '</div>' : '') + '</div>';
     if (chg && chg.items.length) {
       html += '<div class="chglist">' + chg.items.map(function (it) {
         return '<button class="chgitem" data-pos="' + it.pos + '"><span class="ci">' + it.i + '</span><span class="ct">' + esc(it.text) + '</span></button>';
