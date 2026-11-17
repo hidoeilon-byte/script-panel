@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>חלונית תסריט</title>
+  <link rel="stylesheet" href="panel.css">
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+</head>
+<body>
+  <header>
+    <div id="styles"></div>
+    <div class="status">הסמן נמצא ב: <b id="curstyle">—</b></div>
+  </header>
+  <div class="bar">
+    <h2>סצנות</h2>
+    <span id="count"></span>
+    <span class="sp"></span>
+    <label><input type="checkbox" id="showsyn"> תקצירים</label>
+    <button class="icon" id="refresh" title="רענון" aria-label="רענון">↻</button>
+  </div>
+  <div id="scenes"></div>
+  <div id="err" hidden></div>
+  <script src="align.js"></script>
+  <script src="word-real.js"></script>
+  <script src="panel.js"></script>
+</body>
+</html>
