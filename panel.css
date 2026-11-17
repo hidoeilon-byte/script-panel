@@ -188,3 +188,14 @@ header { padding: 10px 10px 8px; border-bottom: 1px solid var(--line); }
 .lmrow span { flex: 1; }
 .lmrow small { color: var(--muted); }
 .newloc { width: 100%; margin-top: 6px; font: inherit; font-size: 12.5px; border: 1px dashed var(--line); border-radius: 4px; padding: 3px 6px; background: var(--card); color: var(--ink); }
+
+/* ---- v5: changes view */
+.chgctl { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 8px; margin-bottom: 6px; }
+.chgrow { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-bottom: 5px; font-size: 12.5px; }
+.chgrow select { font: inherit; font-size: 12.5px; padding: 2px 4px; border-radius: 5px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+.chgstat { color: var(--muted); font-size: 11.5px; margin-inline-start: auto; }
+.chglist { display: flex; flex-direction: column; gap: 4px; }
+.chgitem { display: flex; gap: 6px; align-items: flex-start; text-align: right; font: inherit; font-size: 12.5px; background: var(--card); border: 1px solid var(--line); border-inline-start: 5px solid #f2d23c; border-radius: 6px; padding: 5px 7px; cursor: pointer; color: var(--ink); }
+.chgitem:hover, .chgitem.sel { border-color: var(--accent); background: var(--accent-soft); border-inline-start-color: #f2d23c; }
+.chgitem .ci { color: var(--muted); font-size: 11px; min-width: 16px; }
+.chgitem .ct { flex: 1; }

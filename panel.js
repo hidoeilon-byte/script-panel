@@ -6,11 +6,11 @@
   var customLocs = [];   // locations added by hand
   var locOpen = false;   // bank manager open
   var STYLES = [
-    { name: "כותרת סצנה", label: "סצנה", key: "S" },
-    { name: "תיאור", label: "תיאור", key: "T" },
-    { name: "דמות", label: "דמות", key: "D" },
-    { name: "דיאלוג", label: "דיאלוג", key: "Z" },
-    { name: "הערת בימוי", label: "הערה", key: "H" }
+    { name: "כותרת סצנה", label: "סצנה", key: "F1" },
+    { name: "תיאור", label: "תיאור", key: "F2" },
+    { name: "דמות", label: "דמות", key: "F3" },
+    { name: "דיאלוג", label: "דיאלוג", key: "F4" },
+    { name: "הערת בימוי", label: "הערה", key: "F5" }
   ];
   var COLORS = ["#c9b8f0", "#f4a3a3", "#f7e17a", "#9fe0a5", "#8fe3ea", "#f2a6e3", "#f8c48c", "#a9c8f5", "#d5d0c4"];
 
@@ -105,7 +105,7 @@
     var box = $("styles");
     box.innerHTML = STYLES.map(function (s) {
       return '<button class="sbtn" data-style="' + esc(s.name) + '" title="' + esc(s.name) + '">' +
-        '<span class="sl">' + esc(s.label) + '</span></button>';
+        '<span class="sl">' + esc(s.label) + '</span><span class="sk">' + s.key + '</span></button>';
     }).join("");
     box.addEventListener("click", function (e) {
       var b = e.target.closest(".sbtn");
@@ -134,11 +134,12 @@
       '<div class="seg">' +
         '<button data-view="heads" class="' + (view === "heads" ? "on" : "") + '">כותרות</button>' +
         '<button data-view="struct" class="' + (view === "struct" ? "on" : "") + '">מבנה</button>' +
+        '<button data-view="changes" class="' + (view === "changes" ? "on" : "") + '">שינויים</button>' +
       '</div>' +
       '<span class="cnt">' + (scenes.length ? scenes.length + " סצנות" : "") + '</span>' +
       '<span class="sp"></span>' +
       (view === "heads" ? '<label><input type="checkbox" id="showsyn"' + (showSyn ? " checked" : "") + '> תקצירים</label>' :
-        '<button class="icon" id="fold" title="כווץ או פתח את כל הסיקוונסים">' + (allCollapsed() ? "⊞" : "⊟") + '</button>') +
+        view === "struct" ? '<button class="icon" id="fold" title="כווץ או פתח את כל הסיקוונסים">' + (allCollapsed() ? "⊞" : "⊟") + '</button>' : "") +
       '<button class="icon" id="refresh" title="רענון" aria-label="רענון">↻</button>';
   }
 
@@ -247,8 +248,52 @@
     '</div>';
   }
 
+  // ---------- changes view (talks to the macro through a custom XML part)
+  var chg = null;          // {vs, last, n, items:[{i,pos,text}]}
+  var chgPending = "";
+  var chgSel = 0;
+  function renderChanges(list) {
+    var last = chg && chg.last ? chg.last : 0;
+    var vs = chg && chg.vs ? chg.vs : 0;
+    var opts = "";
+    for (var k = last; k >= 1; k--) opts += '<option value="' + k + '"' + ((chgSel || vs || last) === k ? " selected" : "") + '>דראפט ' + k + '</option>';
+    var html = '<div class="chgctl">' +
+      '<div class="chgrow"><span>מול</span><select id="chgdraft">' + (opts || '<option>טוען…</option>') + '</select>' +
+      '<button class="lb on" id="chgshow">הצג שינויים</button><button class="lb" id="chghide">הסתר</button></div>' +
+      '<div class="chgrow"><button class="lb" id="chgprev" title="F6">▲ הקודם</button><button class="lb" id="chgnext" title="F7">▼ הבא</button>' +
+      '<span class="chgstat">' + (chgPending ? "מעבד…" : (chg && chg.n > 0 ? chg.n + " שינויים מול דראפט " + vs : (chg ? "אין שינויים מוצגים" : ""))) + '</span></div></div>';
+    if (chg && chg.items.length) {
+      html += '<div class="chglist">' + chg.items.map(function (it) {
+        return '<button class="chgitem" data-pos="' + it.pos + '"><span class="ci">' + it.i + '</span><span class="ct">' + esc(it.text) + '</span></button>';
+      }).join("") + '</div>';
+    } else if (chg) {
+      html += '<div class="empty">בחר דראפט ולחץ "הצג שינויים".<br>מה שנוסף יסומן במרקר צהוב, מה שנמחק באפור מחוק.</div>';
+    }
+    list.innerHTML = html;
+  }
+  function refreshChanges() {
+    if (!W.readChanges) return Promise.resolve();
+    return W.readChanges().then(function (c) {
+      var sig = JSON.stringify(c);
+      if (sig !== JSON.stringify(chg) || chgPending) {
+        if (c && chgPending && c.stamp !== (chg && chg.stamp)) chgPending = "";
+        chg = c || { vs: 0, last: 0, n: 0, items: [] };
+        if (view === "changes") renderList();
+      }
+    }).catch(function () {});
+  }
+  function chgRequest(cmd, arg) {
+    chgPending = cmd;
+    if (view === "changes") renderList();
+    return W.sendRequest(cmd, arg || "").then(function () {
+      setTimeout(refreshChanges, 2500);
+      setTimeout(function () { chgPending = ""; refreshChanges(); }, 6000);
+    }).catch(showErr);
+  }
+
   function renderList() {
     var list = $("scenes");
+    if (view === "changes") { list.className = "view-changes"; renderChanges(list); return; }
     list.className = view === "struct" ? "view-struct" : "";
     if (!scenes.length) {
       list.innerHTML = '<div class="empty">אין עדיין סצנות.<br>כותרת סצנה חדשה: Tab עד שמגיעים לסצנה</div>';
@@ -286,6 +331,9 @@
   function render() {
     renderBar();
     renderPlotBar();
+    var hideBars = view === "changes";
+    $("markbar").hidden = hideBars;
+    if (hideBars) $("plotbar").hidden = true;
     renderList();
   }
 
@@ -338,7 +386,11 @@
   function wire() {
     $("bar").addEventListener("click", function (e) {
       var v = e.target.closest("[data-view]");
-      if (v) { view = v.dataset.view; lsSet("view", view); editing = -1; render(); return; }
+      if (v) {
+        view = v.dataset.view; lsSet("view", view); editing = -1; render();
+        if (view === "changes") { refreshChanges().then(function () { if (!chg || !chg.last) W.sendRequest && W.sendRequest("info", ""); }); }
+        return;
+      }
       if (e.target.closest("#refresh")) { sig = ""; refreshScenes(true).then(refreshCursor); return; }
       if (e.target.closest("#fold")) {
         var all = allCollapsed();
@@ -417,6 +469,18 @@
 
     var list = $("scenes");
     list.addEventListener("click", function (e) {
+      if (view === "changes") {
+        if (e.target.closest("#chgshow")) { var n = +$("chgdraft").value; if (n) chgRequest("compare", String(n)); return; }
+        if (e.target.closest("#chghide")) { chgRequest("hide"); return; }
+        if (e.target.closest("#chgnext")) { W.sendRequest("next", ""); return; }
+        if (e.target.closest("#chgprev")) { W.sendRequest("prev", ""); return; }
+        var ci = e.target.closest(".chgitem");
+        if (ci) {
+          Array.prototype.forEach.call(document.querySelectorAll(".chgitem"), function (x) { x.classList.toggle("sel", x === ci); });
+          W.sendRequest("goto", ci.dataset.pos);
+        }
+        return;
+      }
       var go = e.target.closest(".go");
       if (go) { var i = +go.dataset.i; markCurrent(i); W.goToScene(i).catch(showErr); return; }
       var dt = e.target.closest(".dot");
@@ -447,6 +511,7 @@
       if (e.target.classList.contains("seqname")) { scenes[editing].q = e.target.value || " "; debouncePersist(); }
     });
     list.addEventListener("change", function (e) {
+      if (e.target.id === "chgdraft") { chgSel = +e.target.value; return; }
       if (editing < 0) return;
       if (e.target.classList.contains("isseq")) {
         scenes[editing].q = e.target.checked ? "סיקוונס חדש" : "";
@@ -682,7 +747,9 @@
     refreshScenes().then(refreshCursor);
     setInterval(function () {
       if (document.hidden || editing >= 0) return;
+      if (view === "changes") { refreshChanges(); return; }
       refreshScenes();
-    }, 4000);
+    }, 3000);
+    if (view === "changes") refreshChanges();
   });
 })();

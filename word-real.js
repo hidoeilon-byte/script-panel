@@ -165,6 +165,38 @@
       });
     },
 
+    // changes list written by the macro
+    readChanges: function () {
+      return new Promise(function (res) {
+        try {
+          Office.context.document.customXmlParts.getByNamespaceAsync("urn:scripttool:chg", function (r) {
+            if (r.status !== "succeeded" || !r.value || !r.value.length) return res(null);
+            r.value[r.value.length - 1].getXmlAsync(function (x) {
+              if (x.status !== "succeeded") return res(null);
+              var doc = new DOMParser().parseFromString(x.value, "text/xml");
+              var root = doc.documentElement;
+              var items = Array.prototype.map.call(root.getElementsByTagName("c"), function (c) {
+                return { i: +c.getAttribute("i"), pos: +c.getAttribute("pos"), text: c.textContent };
+              });
+              res({ vs: +root.getAttribute("vs"), last: +root.getAttribute("last"), n: +root.getAttribute("n"), stamp: root.getAttribute("stamp"), items: items });
+            });
+          });
+        } catch (e) { res(null); }
+      });
+    },
+
+    // leave a request for the macro (picked up within ~2 seconds)
+    sendRequest: function (cmd, arg) {
+      return new Promise(function (res, rej) {
+        try {
+          var esc = function (t) { return String(t).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;"); };
+          Office.context.document.customXmlParts.addAsync('<req xmlns="urn:scripttool:req" cmd="' + esc(cmd) + '" arg="' + esc(arg) + '"/>', function (r) {
+            if (r.status === "succeeded") res(); else rej(new Error("request failed"));
+          });
+        } catch (e) { rej(e); }
+      });
+    },
+
     loadData: function () {
       try {
         var st = Office.context.document.settings;
