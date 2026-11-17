@@ -10,7 +10,7 @@
     { name: "תיאור", label: "תיאור", key: "F2" },
     { name: "דמות", label: "דמות", key: "F3" },
     { name: "דיאלוג", label: "דיאלוג", key: "F4" },
-    { name: "הערת בימוי", label: "הערה", key: "F5" }
+    { name: "הערת בימוי", label: "הערה", key: "F8" }
   ];
   var COLORS = ["#c9b8f0", "#f4a3a3", "#f7e17a", "#9fe0a5", "#8fe3ea", "#f2a6e3", "#f8c48c", "#a9c8f5", "#d5d0c4"];
 
