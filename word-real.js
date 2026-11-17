@@ -197,6 +197,34 @@
       });
     },
 
+    // change regions marked by the macro (bookmarks zChgP#, higher number = earlier in the document)
+    listChangeMarks: function () {
+      if (!Office.context.requirements.isSetSupported("WordApi", "1.4")) return Promise.resolve(null);
+      return run(function (ctx) {
+        var names = ctx.document.body.getRange("Whole").getBookmarks(true, true);
+        return ctx.sync().then(function () {
+          var list = names.value.filter(function (n) { return /^zChgP\d+$/.test(n); })
+            .sort(function (a, b) { return +b.slice(5) - +a.slice(5); });
+          var paras = list.map(function (n) {
+            var p = ctx.document.getBookmarkRangeOrNullObject(n).paragraphs.getFirst();
+            p.load("text");
+            return p;
+          });
+          return ctx.sync().then(function () {
+            return list.map(function (n, i) { return { name: n, i: i + 1, text: (paras[i].isNullObject ? "" : paras[i].text).trim().slice(0, 90) }; });
+          });
+        });
+      });
+    },
+
+    gotoMark: function (name) {
+      return run(function (ctx) {
+        var r = ctx.document.getBookmarkRangeOrNullObject(name);
+        r.select("Start");
+        return ctx.sync();
+      });
+    },
+
     // leave a request for the macro (picked up within ~2 seconds)
     sendRequest: function (cmd, arg) {
       return new Promise(function (res, rej) {

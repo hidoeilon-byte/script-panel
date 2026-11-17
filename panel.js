@@ -252,6 +252,8 @@
   var chg = null;          // {vs, last, n, items:[{i,pos,text}]}
   var chgPending = "";
   var chgSel = 0;
+  var marks2 = null;       // [{name,i,text}] read straight from the document
+  var markIdx = 0;
   function renderChanges(list) {
     var last = chg && chg.last ? chg.last : 0;
     var vs = chg && chg.vs ? chg.vs : 0;
@@ -261,18 +263,31 @@
       '<div class="chgrow"><span>מול</span><select id="chgdraft">' + (opts || '<option>טוען…</option>') + '</select>' +
       '<button class="lb on" id="chgshow">הצג שינויים</button><button class="lb" id="chghide">הסתר</button></div>' +
       '<div class="chgrow"><button class="lb" id="chgprev" title="F6">▲ הקודם</button><button class="lb" id="chgnext" title="F7">▼ הבא</button>' +
-      '<span class="chgstat">' + (chgPending ? "מעבד…" : (chg && chg.n > 0 ? chg.n + " שינויים מול דראפט " + vs : (chg ? "אין שינויים מוצגים" : ""))) + '</span></div>' +
+      '<span class="chgstat">' + (chgPending ? "מעבד…" : (marks2 ? (marks2.length ? (markIdx ? "שינוי " + markIdx + " מתוך " : "") + marks2.length + " שינויים" : "אין שינויים מוצגים") : (chg && chg.n > 0 ? chg.n + " שינויים מול דראפט " + vs : (chg ? "אין שינויים מוצגים" : "")))) + '</span></div>' +
       (window.CHGDBG && (!chg || !chg.last) ? '<div class="chgstat" style="direction:ltr">' + esc(window.CHGDBG) + '</div>' : '') + '</div>';
-    if (chg && chg.items.length) {
-      html += '<div class="chglist">' + chg.items.map(function (it) {
-        return '<button class="chgitem" data-pos="' + it.pos + '"><span class="ci">' + it.i + '</span><span class="ct">' + esc(it.text) + '</span></button>';
+    var items = marks2 || (chg ? chg.items : []);
+    if (items && items.length) {
+      html += '<div class="chglist">' + items.map(function (it, k) {
+        return '<button class="chgitem' + (markIdx === k + 1 ? " sel" : "") + '" data-k="' + (k + 1) + '"' + (it.name ? ' data-name="' + esc(it.name) + '"' : ' data-pos="' + it.pos + '"') + '><span class="ci">' + (k + 1) + '</span><span class="ct">' + esc(it.text || "(שורה ריקה)") + '</span></button>';
       }).join("") + '</div>';
-    } else if (chg) {
+    } else if (chg || marks2) {
       html += '<div class="empty">בחר דראפט ולחץ "הצג שינויים".<br>מה שנוסף יסומן במרקר צהוב, מה שנמחק באפור מחוק.</div>';
     }
     list.innerHTML = html;
   }
   function refreshChanges() {
+    if (W.listChangeMarks) {
+      W.listChangeMarks().then(function (m) {
+        if (m === null) return;
+        var sig = JSON.stringify(m);
+        if (sig !== JSON.stringify(marks2) || chgPending) {
+          if (chgPending && sig !== JSON.stringify(marks2)) chgPending = "";
+          marks2 = m;
+          if (markIdx > m.length) markIdx = 0;
+          if (view === "changes") renderList();
+        }
+      }).catch(function () {});
+    }
     if (!W.readChanges) return Promise.resolve();
     return W.readChanges().then(function (c) {
       var sig = JSON.stringify(c);
@@ -288,7 +303,7 @@
     if (view === "changes") renderList();
     return W.sendRequest(cmd, arg || "").then(function () {
       setTimeout(refreshChanges, 2500);
-      setTimeout(function () { chgPending = ""; refreshChanges(); }, 6000);
+      setTimeout(function () { chgPending = ""; refreshChanges(); if (view === "changes") renderList(); }, 7000);
     }).catch(showErr);
   }
 
@@ -473,12 +488,21 @@
       if (view === "changes") {
         if (e.target.closest("#chgshow")) { var n = +$("chgdraft").value; if (n) chgRequest("compare", String(n)); return; }
         if (e.target.closest("#chghide")) { chgRequest("hide"); return; }
-        if (e.target.closest("#chgnext")) { W.sendRequest("next", ""); return; }
-        if (e.target.closest("#chgprev")) { W.sendRequest("prev", ""); return; }
+        var goK = function (k) {
+          if (!marks2 || !marks2.length) return false;
+          markIdx = ((k - 1 + marks2.length) % marks2.length) + 1;
+          W.gotoMark(marks2[markIdx - 1].name).catch(showErr);
+          renderList();
+          var el = document.querySelector('.chgitem[data-k="' + markIdx + '"]');
+          if (el && el.scrollIntoViewIfNeeded) el.scrollIntoViewIfNeeded(false);
+          return true;
+        };
+        if (e.target.closest("#chgnext")) { if (!goK(markIdx + 1)) W.sendRequest("next", ""); return; }
+        if (e.target.closest("#chgprev")) { if (!goK(markIdx ? markIdx - 1 : (marks2 ? marks2.length : 0))) W.sendRequest("prev", ""); return; }
         var ci = e.target.closest(".chgitem");
         if (ci) {
-          Array.prototype.forEach.call(document.querySelectorAll(".chgitem"), function (x) { x.classList.toggle("sel", x === ci); });
-          W.sendRequest("goto", ci.dataset.pos);
+          if (ci.dataset.name) { goK(+ci.dataset.k); }
+          else W.sendRequest("goto", ci.dataset.pos);
         }
         return;
       }
