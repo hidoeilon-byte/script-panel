@@ -158,6 +158,7 @@
         '<button data-view="heads" class="' + (view === "heads" ? "on" : "") + '">כותרות</button>' +
         '<button data-view="struct" class="' + (view === "struct" ? "on" : "") + '">מבנה</button>' +
         '<button data-view="changes" class="' + (view === "changes" ? "on" : "") + '">שינויים</button>' +
+        '<button data-view="tools" class="' + (view === "tools" ? "on" : "") + '">כלים</button>' +
       '</div>' +
       '<span class="cnt">' + (scenes.length ? scenes.length + " סצנות" : "") + '</span>' +
       '<span class="sp"></span>' +
@@ -277,6 +278,33 @@
   var chgSel = 0;
   var marks2 = null;       // [{name,i,text}] read straight from the document
   var markIdx = 0;
+  // ---------- tools: the actions that used to be ribbon buttons, sent to the macro through the bridge
+  var TOOLS = [
+    { h: "סינופסיס", items: [
+      { cmd: "syn2scr", t: "עדכן תסריט מסינופסיס", d: "הסינופסיס מעודכן: מוסיף סצנות חסרות ומחליף לוקיישנים בתסריט. תיאור הסינופסיס נכנס כהערה." },
+      { cmd: "scr2syn", t: "עדכן סינופסיס מתסריט", d: "התסריט מעודכן: מוסיף לסינופסיס כותרות חסרות ומחליף לוקיישנים." }
+    ], note: "לחיצה ראשונה מציגה מה ישתנה. לחיצה שנייה על אותו כפתור מבצעת. לפני כל שינוי נשמר גיבוי." },
+    { h: "דראפטים", items: [
+      { cmd: "force", t: "דראפט חדש עכשיו", d: "שומר דראפט חדש בלי לחכות לשינוי מהותי." },
+      { cmd: "prevdraft", t: "דראפט קודם", d: "פותח את הדראפט הקודם לקריאה, לצד הקובץ." }
+    ] },
+    { h: "הגשה", items: [
+      { cmd: "check", t: "לפני הגשה", d: "בודק את הפורמט לפני שליחה לקרן." }
+    ] },
+    { h: "תסריט", items: [
+      { cmd: "new", t: "תסריט חדש", d: "פותח תסריט חדש בפורמט הקרן." }
+    ] }
+  ];
+  var toolPending = "";
+  function renderTools(list) {
+    list.innerHTML = TOOLS.map(function (g) {
+      return '<div class="toolgrp"><div class="toolh">' + esc(g.h) + '</div>' + g.items.map(function (it) {
+        return '<button class="toolbtn' + (toolPending === it.cmd ? " busy" : "") + '" data-cmd="' + it.cmd + '"><b>' + esc(it.t) + '</b><span>' +
+          esc(toolPending === it.cmd ? "נשלח… (עד 2 שניות)" : it.d) + '</span></button>';
+      }).join("") + (g.note ? '<div class="toolnote">' + esc(g.note) + '</div>' : "") + '</div>';
+    }).join("");
+  }
+
   function renderChanges(list) {
     var last = chg && chg.last ? chg.last : 0;
     var vs = chg && chg.vs ? chg.vs : 0;
@@ -333,6 +361,7 @@
   function renderList() {
     var list = $("scenes");
     if (view === "changes") { list.className = "view-changes"; renderChanges(list); return; }
+    if (view === "tools") { list.className = "view-tools"; renderTools(list); return; }
     list.className = view === "struct" ? "view-struct" : "";
     if (!scenes.length) {
       list.innerHTML = '<div class="empty">אין עדיין סצנות.<br>כותרת סצנה חדשה: Tab עד שמגיעים לסצנה</div>';
@@ -370,7 +399,7 @@
   function render() {
     renderBar();
     renderPlotBar();
-    var hideBars = view === "changes";
+    var hideBars = view === "changes" || view === "tools";
     $("markbar").hidden = hideBars;
     if (hideBars) $("plotbar").hidden = true;
     renderList();
@@ -508,6 +537,15 @@
 
     var list = $("scenes");
     list.addEventListener("click", function (e) {
+      if (view === "tools") {
+        var tb = e.target.closest(".toolbtn");
+        if (tb) {
+          toolPending = tb.dataset.cmd; renderList();
+          W.sendRequest(tb.dataset.cmd, "").catch(showErr);
+          setTimeout(function () { toolPending = ""; if (view === "tools") renderList(); }, 2500);
+        }
+        return;
+      }
       if (view === "changes") {
         if (e.target.closest("#chgshow")) { var n = +$("chgdraft").value; if (n) chgRequest("compare", String(n)); return; }
         if (e.target.closest("#chghide")) { chgRequest("hide"); return; }

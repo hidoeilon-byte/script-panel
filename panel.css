@@ -201,3 +201,13 @@ header { padding: 10px 10px 8px; border-bottom: 1px solid var(--line); }
 .chgitem:hover, .chgitem.sel { border-color: var(--accent); background: var(--accent-soft); border-inline-start-color: #f2d23c; }
 .chgitem .ci { color: var(--muted); font-size: 11px; min-width: 16px; }
 .chgitem .ct { flex: 1; }
+
+/* tools tab */
+.toolgrp { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 8px; margin-bottom: 8px; }
+.toolh { font-weight: 700; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+.toolbtn { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; text-align: right; font: inherit; border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 6px; padding: 7px 9px; margin-bottom: 5px; cursor: pointer; }
+.toolbtn:hover { border-color: var(--accent); }
+.toolbtn b { font-size: 13px; }
+.toolbtn span { font-size: 11.5px; color: var(--muted); }
+.toolbtn.busy { border-color: var(--accent); background: var(--accent-soft); }
+.toolnote { font-size: 11px; color: var(--muted); line-height: 1.4; }
