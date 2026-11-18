@@ -338,7 +338,9 @@
           '<button class="lb noteok" data-id="' + esc(n.id) + '" title="' + (n.resolved ? "פתח מחדש" : "סמן כטופל") + '">' + (n.resolved ? "↺" : "✓ טופל") + '</button></div>';
       }).join("") + '</div>';
     }
+    var y = window.scrollY, sy = list.scrollTop;
     list.innerHTML = html;
+    window.scrollTo(0, y); list.scrollTop = sy;
   }
   function renderTools(list) {
     list.innerHTML = TOOLS.map(function (g) {
@@ -592,7 +594,11 @@
           return;
         }
         var ng = e.target.closest(".notego");
-        if (ng) { noteSel = ng.dataset.id; renderList(); W.gotoNote(ng.dataset.id).catch(showErr); }
+        if (ng) {
+          noteSel = ng.dataset.id;
+          Array.prototype.forEach.call(document.querySelectorAll(".noteitem"), function (el) { el.classList.toggle("sel", el.dataset.id === noteSel); });
+          W.gotoNote(ng.dataset.id).catch(showErr);
+        }
         return;
       }
       if (view === "tools") {
