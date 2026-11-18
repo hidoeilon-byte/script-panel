@@ -217,6 +217,50 @@
       });
     },
 
+    // Word comments (sync notes and any other notes) for the notes tab
+    listNotes: function () {
+      if (!Office.context.requirements.isSetSupported("WordApi", "1.4")) return Promise.resolve(null);
+      return run(function (ctx) {
+        var cs = ctx.document.body.getComments();
+        cs.load("items/id,items/content,items/resolved,items/authorName");
+        return ctx.sync().then(function () {
+          var paras = cs.items.map(function (c) {
+            var p = c.getRange().paragraphs.getFirst();
+            p.load("text,style");
+            return p;
+          });
+          return ctx.sync().then(function () {
+            return cs.items.map(function (c, i) {
+              return { id: c.id, text: (c.content || "").trim(), resolved: !!c.resolved, author: c.authorName || "",
+                       where: (paras[i].text || "").trim().slice(0, 90), style: paras[i].style || "" };
+            });
+          });
+        });
+      });
+    },
+    gotoNote: function (id) {
+      return run(function (ctx) {
+        var cs = ctx.document.body.getComments();
+        cs.load("items/id");
+        return ctx.sync().then(function () {
+          var c = cs.items.filter(function (x) { return x.id === id; })[0];
+          if (c) c.getRange().select("Select");
+          return ctx.sync();
+        });
+      });
+    },
+    resolveNote: function (id, done) {
+      return run(function (ctx) {
+        var cs = ctx.document.body.getComments();
+        cs.load("items/id");
+        return ctx.sync().then(function () {
+          var c = cs.items.filter(function (x) { return x.id === id; })[0];
+          if (c) c.resolved = done;
+          return ctx.sync();
+        });
+      });
+    },
+
     gotoMark: function (name) {
       return run(function (ctx) {
         var r = ctx.document.getBookmarkRangeOrNullObject(name);

@@ -158,6 +158,7 @@
         '<button data-view="heads" class="' + (view === "heads" ? "on" : "") + '">כותרות</button>' +
         '<button data-view="struct" class="' + (view === "struct" ? "on" : "") + '">מבנה</button>' +
         '<button data-view="changes" class="' + (view === "changes" ? "on" : "") + '">שינויים</button>' +
+        '<button data-view="notes" class="' + (view === "notes" ? "on" : "") + '">הערות' + (openNotes() ? ' <span class="badge">' + openNotes() + '</span>' : '') + '</button>' +
         '<button data-view="tools" class="' + (view === "tools" ? "on" : "") + '">כלים</button>' +
       '</div>' +
       '<span class="cnt">' + (scenes.length ? scenes.length + " סצנות" : "") + '</span>' +
@@ -296,6 +297,49 @@
     ] }
   ];
   var toolPending = "";
+
+  // ---------- notes: Word comments, with the sync notes first-class
+  var notes = null;        // [{id, text, resolved, where, style}]
+  var noteSel = "";
+  var showDone = false;
+  function openNotes() { return notes ? notes.filter(function (n) { return !n.resolved; }).length : 0; }
+  function noteKind(t) {
+    if (/^לפי סינופסיס|^לפי התסריט/.test(t)) return { k: "loc", l: "לוקיישן השתנה" };
+    if (/^סצנה חדשה מ|חסרה בסינופסיס/.test(t)) return { k: "new", l: "סצנה חדשה" };
+    if (/^הסצנה הזו לא קיימת/.test(t)) return { k: "gone", l: "לא בסינופסיס" };
+    return { k: "other", l: "הערה" };
+  }
+  function refreshNotes() {
+    if (!W.listNotes) return Promise.resolve();
+    return W.listNotes().then(function (n) {
+      if (n === null) { notes = []; return; }
+      var changed = JSON.stringify(n) !== JSON.stringify(notes);
+      notes = n;
+      if (changed) { renderBar(); if (view === "notes") renderList(); }
+    }).catch(function () {});
+  }
+  function renderNotes(list) {
+    if (!notes) { list.innerHTML = '<div class="empty">טוען הערות…</div>'; return; }
+    var shown = notes.filter(function (n) { return showDone || !n.resolved; });
+    var html = '<div class="chgctl"><div class="chgrow"><span class="chgstat">' +
+      (openNotes() ? openNotes() + " הערות פתוחות" : "אין הערות פתוחות") + '</span><span class="sp"></span>' +
+      '<label><input type="checkbox" id="notedone"' + (showDone ? " checked" : "") + '> הצג גם שטופלו</label></div></div>';
+    if (!shown.length) {
+      html += '<div class="empty">' + (notes.length ? "כל ההערות טופלו." : "אין הערות במסמך.") +
+        '<br>הערות נוספות כשמעדכנים את התסריט מהסינופסיס (כלים).</div>';
+    } else {
+      html += '<div class="chglist">' + shown.map(function (n, k) {
+        var kd = noteKind(n.text);
+        var body = n.text.split("\n")[0].replace(/\r/g, " ");
+        return '<div class="noteitem' + (noteSel === n.id ? " sel" : "") + (n.resolved ? " done" : "") + '" data-id="' + esc(n.id) + '">' +
+          '<button class="notego" data-id="' + esc(n.id) + '"><span class="nk nk-' + kd.k + '">' + kd.l + '</span>' +
+          '<span class="nw">' + esc(n.where || "(שורה ריקה)") + '</span>' +
+          '<span class="nt">' + esc(body.slice(0, 140)) + '</span></button>' +
+          '<button class="lb noteok" data-id="' + esc(n.id) + '" title="' + (n.resolved ? "פתח מחדש" : "סמן כטופל") + '">' + (n.resolved ? "↺" : "✓ טופל") + '</button></div>';
+      }).join("") + '</div>';
+    }
+    list.innerHTML = html;
+  }
   function renderTools(list) {
     list.innerHTML = TOOLS.map(function (g) {
       return '<div class="toolgrp"><div class="toolh">' + esc(g.h) + '</div>' + g.items.map(function (it) {
@@ -362,6 +406,7 @@
     var list = $("scenes");
     if (view === "changes") { list.className = "view-changes"; renderChanges(list); return; }
     if (view === "tools") { list.className = "view-tools"; renderTools(list); return; }
+    if (view === "notes") { list.className = "view-notes"; renderNotes(list); return; }
     list.className = view === "struct" ? "view-struct" : "";
     if (!scenes.length) {
       list.innerHTML = '<div class="empty">אין עדיין סצנות.<br>כותרת סצנה חדשה: Tab עד שמגיעים לסצנה</div>';
@@ -399,7 +444,7 @@
   function render() {
     renderBar();
     renderPlotBar();
-    var hideBars = view === "changes" || view === "tools";
+    var hideBars = view === "changes" || view === "tools" || view === "notes";
     $("markbar").hidden = hideBars;
     if (hideBars) $("plotbar").hidden = true;
     renderList();
@@ -457,6 +502,7 @@
       if (v) {
         view = v.dataset.view; lsSet("view", view); editing = -1; render();
         if (view === "changes") { refreshChanges().then(function () { if (!chg || !chg.last) W.sendRequest && W.sendRequest("info", ""); }); }
+        if (view === "notes") { refreshNotes(); }
         return;
       }
       if (e.target.closest("#refresh")) { sig = ""; refreshScenes(true).then(refreshCursor); return; }
@@ -537,6 +583,18 @@
 
     var list = $("scenes");
     list.addEventListener("click", function (e) {
+      if (view === "notes") {
+        if (e.target.id === "notedone") { showDone = e.target.checked; renderList(); return; }
+        var ok = e.target.closest(".noteok");
+        if (ok) {
+          var nn = (notes || []).filter(function (x) { return x.id === ok.dataset.id; })[0];
+          if (nn) { nn.resolved = !nn.resolved; renderBar(); renderList(); W.resolveNote(nn.id, nn.resolved).then(refreshNotes).catch(showErr); }
+          return;
+        }
+        var ng = e.target.closest(".notego");
+        if (ng) { noteSel = ng.dataset.id; renderList(); W.gotoNote(ng.dataset.id).catch(showErr); }
+        return;
+      }
       if (view === "tools") {
         var tb = e.target.closest(".toolbtn");
         if (tb) {
@@ -833,9 +891,12 @@
     refreshScenes().then(refreshCursor);
     setInterval(function () {
       if (document.hidden || editing >= 0) return;
+      refreshNotes();
       if (view === "changes") { refreshChanges(); return; }
+      if (view === "notes") return;
       refreshScenes();
     }, 3000);
     if (view === "changes") refreshChanges();
+    refreshNotes();
   });
 })();
