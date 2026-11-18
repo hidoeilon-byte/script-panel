@@ -285,6 +285,10 @@
       { cmd: "syn2scr", t: "עדכן תסריט מסינופסיס", d: "הסינופסיס מעודכן: מוסיף סצנות חסרות ומחליף לוקיישנים בתסריט. תיאור הסינופסיס נכנס כהערה." },
       { cmd: "scr2syn", t: "עדכן סינופסיס מתסריט", d: "התסריט מעודכן: מוסיף לסינופסיס כותרות חסרות ומחליף לוקיישנים." }
     ], note: "לחיצה ראשונה מציגה מה ישתנה. לחיצה שנייה על אותו כפתור מבצעת. לפני כל שינוי נשמר גיבוי." },
+    { h: "השוואת תוכן עם Claude", items: [
+      { cmd: "synnotes", t: "הכנס סינופסיס להערות", d: "מוסיף לכל סצנה הערה עם הפסקה שלה מהסינופסיס. הטקסט של התסריט לא משתנה." },
+      { cmd: "synnotesoff", t: "הסר הערות סינופסיס", d: "מוחק רק את הערות הסינופסיס. שאר ההערות נשארות." }
+    ], note: "אחרי ההכנסה, בקש מ-Claude ב-Word: \"השווה כל סצנה להערת הסינופסיס שלה\". הוא יראה סצנה אחרי סצנה מה חסר, מה נוסף ומה סותר." },
     { h: "דראפטים", items: [
       { cmd: "force", t: "דראפט חדש עכשיו", d: "שומר דראפט חדש בלי לחכות לשינוי מהותי." },
       { cmd: "prevdraft", t: "דראפט קודם", d: "פותח את הדראפט הקודם לקריאה, לצד הקובץ." }
@@ -302,6 +306,8 @@
   var notes = null;        // [{id, text, resolved, where, style}]
   var noteSel = "";
   var showDone = false;
+  var synNoteCount = 0;
+  function isSynNote(t) { return /^סינופסיס \d+:/.test((t || "").trim()); }
   function openNotes() { return notes ? notes.filter(function (n) { return !n.resolved; }).length : 0; }
   function noteKind(t) {
     if (/^לפי סינופסיס|^לפי התסריט/.test(t)) return { k: "loc", l: "לוקיישן השתנה" };
@@ -313,6 +319,8 @@
     if (!W.listNotes) return Promise.resolve();
     return W.listNotes().then(function (n) {
       if (n === null) { notes = []; return; }
+      synNoteCount = n.filter(function (x) { return isSynNote(x.text); }).length;
+      n = n.filter(function (x) { return !isSynNote(x.text); });
       var changed = JSON.stringify(n) !== JSON.stringify(notes);
       notes = n;
       if (changed) { renderBar(); if (view === "notes") renderList(); }
@@ -323,7 +331,8 @@
     var shown = notes.filter(function (n) { return showDone || !n.resolved; });
     var html = '<div class="chgctl"><div class="chgrow"><span class="chgstat">' +
       (openNotes() ? openNotes() + " הערות פתוחות" : "אין הערות פתוחות") + '</span><span class="sp"></span>' +
-      '<label><input type="checkbox" id="notedone"' + (showDone ? " checked" : "") + '> הצג גם שטופלו</label></div></div>';
+      '<label><input type="checkbox" id="notedone"' + (showDone ? " checked" : "") + '> הצג גם שטופלו</label></div>' +
+      (synNoteCount ? '<div class="chgrow"><span class="chgstat">' + synNoteCount + ' הערות סינופסיס לא מוצגות כאן (להסרה: כלים)</span></div>' : '') + '</div>';
     if (!shown.length) {
       html += '<div class="empty">' + (notes.length ? "כל ההערות טופלו." : "אין הערות במסמך.") +
         '<br>הערות נוספות כשמעדכנים את התסריט מהסינופסיס (כלים).</div>';
