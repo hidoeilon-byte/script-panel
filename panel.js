@@ -285,10 +285,11 @@
       { cmd: "syn2scr", t: "עדכן תסריט מסינופסיס", d: "הסינופסיס מעודכן: מוסיף סצנות חסרות ומחליף לוקיישנים בתסריט. תיאור הסינופסיס נכנס כהערה." },
       { cmd: "scr2syn", t: "עדכן סינופסיס מתסריט", d: "התסריט מעודכן: מוסיף לסינופסיס כותרות חסרות ומחליף לוקיישנים." }
     ], note: "לחיצה ראשונה מציגה מה ישתנה. לחיצה שנייה על אותו כפתור מבצעת. לפני כל שינוי נשמר גיבוי." },
-    { h: "השוואת תוכן עם Claude", items: [
-      { cmd: "synnotes", t: "הכנס סינופסיס להערות", d: "מוסיף לכל סצנה הערה עם הפסקה שלה מהסינופסיס. הטקסט של התסריט לא משתנה." },
-      { cmd: "synnotesoff", t: "הסר הערות סינופסיס", d: "מוחק רק את הערות הסינופסיס. שאר ההערות נשארות." }
-    ], note: "אחרי ההכנסה, בקש מ-Claude ב-Word: \"השווה כל סצנה להערת הסינופסיס שלה\". הוא יראה סצנה אחרי סצנה מה חסר, מה נוסף ומה סותר." },
+    { h: "השוואה חכמה עם Claude", items: [
+      { cmd: "smart_s2t", t: "סינופסיס ← תסריט", d: "מה שכתוב בסינופסיס וחסר או שונה בתסריט. ההערות נכנסות לתסריט." },
+      { cmd: "smart_t2s", t: "תסריט ← סינופסיס", d: "מה שקורה בתסריט וחסר או שונה בסינופסיס. נפתח הסינופסיס וההערות נכנסות אליו." },
+      { cmd: "smartclear", t: "סיום השוואה", d: "מוחק את הערות העזר. הערות ההשוואה נשארות." }
+    ], note: "1. לוחצים על כיוון. 2. מעתיקים את הבקשה שמופיעה כאן. 3. מדביקים ל-Claude ב-Word (בחלון של המסמך שמקבל את ההערות). 4. ההבדלים מופיעים בלשונית הערות." },
     { h: "דראפטים", items: [
       { cmd: "force", t: "דראפט חדש עכשיו", d: "שומר דראפט חדש בלי לחכות לשינוי מהותי." },
       { cmd: "prevdraft", t: "דראפט קודם", d: "פותח את הדראפט הקודם לקריאה, לצד הקובץ." }
@@ -301,15 +302,21 @@
     ] }
   ];
   var toolPending = "";
+  var smartPrompt = "";   // "s2t" | "t2s" | ""
+  var PROMPTS = {
+    s2t: "השוואה חכמה, סינופסיס ← תסריט. על כל כותרת סצנה בתסריט יש הערה שמתחילה ב\"סינופסיס\" ובה מה שהסינופסיס אומר על הסצנה. עבור סצנה אחרי סצנה, קרא את כל הטקסט של הסצנה ואת הערת הסינופסיס שלה, ומצא כל פעולה, פרט או רגע שכתובים בסינופסיס וחסרים בתסריט או קורים בו אחרת. על כל הבדל הוסף הערת Word (Comment) חדשה שמתחילה במילה \"השוואה:\": אם ההבדל קשור למשפט מסוים בתסריט, עגן את ההערה על המשפט הזה; אם משהו חסר לגמרי, עגן אותה על כותרת הסצנה. בהערה: מה כתוב בסינופסיס, ומה יש (או אין) בתסריט, בקצרה. אל תשנה טקסט בתסריט ואל תמחק הערות. בסוף כתוב לי בצ'אט כמה הבדלים מצאת ובאילו סצנות.",
+    t2s: "השוואה חכמה, תסריט ← סינופסיס. על כל כותרת סצנה בסינופסיס יש הערה שמתחילה ב\"תסריט:\" ובה הטקסט של הסצנה מהתסריט. עבור סצנה אחרי סצנה, השווה את הפסקאות של הסינופסיס להערת התסריט, ומצא כל פעולה או רגע משמעותי שקורה בתסריט וחסר בסינופסיס או מתואר בו אחרת. לא פרטים קטנים כמו משפטי דיאלוג או תפאורה. על כל הבדל הוסף הערת Word (Comment) חדשה שמתחילה במילה \"השוואה:\": עגן אותה על המשפט בסינופסיס שמתאר את הרגע, או על כותרת הסצנה אם הרגע חסר לגמרי. בהערה: מה קורה בתסריט, ומה כתוב (או לא כתוב) בסינופסיס, בקצרה. אל תשנה טקסט ואל תמחק הערות. בסוף כתוב לי בצ'אט כמה הבדלים מצאת ובאילו סצנות."
+  };
 
   // ---------- notes: Word comments, with the sync notes first-class
   var notes = null;        // [{id, text, resolved, where, style}]
   var noteSel = "";
   var showDone = false;
   var synNoteCount = 0;
-  function isSynNote(t) { return /^סינופסיס \d+:/.test((t || "").trim()); }
+  function isSynNote(t) { t = (t || "").trim(); return /^סינופסיס \d+:/.test(t) || /^תסריט:/.test(t); }
   function openNotes() { return notes ? notes.filter(function (n) { return !n.resolved; }).length : 0; }
   function noteKind(t) {
+    if (/^השוואה:/.test(t)) return { k: "cmp", l: "השוואה" };
     if (/^לפי סינופסיס|^לפי התסריט/.test(t)) return { k: "loc", l: "לוקיישן השתנה" };
     if (/^סצנה חדשה מ|חסרה בסינופסיס/.test(t)) return { k: "new", l: "סצנה חדשה" };
     if (/^הסצנה הזו לא קיימת/.test(t)) return { k: "gone", l: "לא בסינופסיס" };
@@ -332,7 +339,7 @@
     var html = '<div class="chgctl"><div class="chgrow"><span class="chgstat">' +
       (openNotes() ? openNotes() + " הערות פתוחות" : "אין הערות פתוחות") + '</span><span class="sp"></span>' +
       '<label><input type="checkbox" id="notedone"' + (showDone ? " checked" : "") + '> הצג גם שטופלו</label></div>' +
-      (synNoteCount ? '<div class="chgrow"><span class="chgstat">' + synNoteCount + ' הערות סינופסיס לא מוצגות כאן (להסרה: כלים)</span></div>' : '') + '</div>';
+      (synNoteCount ? '<div class="chgrow"><span class="chgstat">' + synNoteCount + ' הערות עזר להשוואה לא מוצגות כאן (להסרה: כלים ← סיום השוואה)</span></div>' : '') + '</div>';
     if (!shown.length) {
       html += '<div class="empty">' + (notes.length ? "כל ההערות טופלו." : "אין הערות במסמך.") +
         '<br>הערות נוספות כשמעדכנים את התסריט מהסינופסיס (כלים).</div>';
@@ -356,7 +363,10 @@
       return '<div class="toolgrp"><div class="toolh">' + esc(g.h) + '</div>' + g.items.map(function (it) {
         return '<button class="toolbtn' + (toolPending === it.cmd ? " busy" : "") + '" data-cmd="' + it.cmd + '"><b>' + esc(it.t) + '</b><span>' +
           esc(toolPending === it.cmd ? "נשלח… (עד 2 שניות)" : it.d) + '</span></button>';
-      }).join("") + (g.note ? '<div class="toolnote">' + esc(g.note) + '</div>' : "") + '</div>';
+      }).join("") + (g.note ? '<div class="toolnote">' + esc(g.note) + '</div>' : "") +
+        (g.h.indexOf("השוואה חכמה") === 0 && smartPrompt ? '<div class="promptbox"><div class="toolh">הבקשה ל-Claude (' + (smartPrompt === "s2t" ? "בחלון התסריט" : "בחלון הסינופסיס") + ')</div>' +
+          '<textarea id="smarttext" readonly rows="5">' + esc(PROMPTS[smartPrompt]) + '</textarea>' +
+          '<button class="lb on" id="smartcopy">העתק</button> <span class="chgstat" id="smartcopied"></span></div>' : "") + '</div>';
     }).join("");
   }
 
@@ -611,8 +621,19 @@
         return;
       }
       if (view === "tools") {
+        if (e.target.closest("#smartcopy")) {
+          var ta = $("smarttext");
+          var done = function () { $("smartcopied").textContent = "הועתק. עכשיו הדבק ב-Claude (Cmd+V)"; };
+          ta.focus(); ta.select();
+          try { if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(ta.value).then(done, function () { document.execCommand("copy"); done(); }); return; } } catch (er) {}
+          try { document.execCommand("copy"); done(); } catch (er2) { $("smartcopied").textContent = "סמן את הטקסט והעתק ידנית (Cmd+C)"; }
+          return;
+        }
         var tb = e.target.closest(".toolbtn");
         if (tb) {
+          if (tb.dataset.cmd === "smart_s2t") smartPrompt = "s2t";
+          else if (tb.dataset.cmd === "smart_t2s") smartPrompt = "t2s";
+          else if (tb.dataset.cmd === "smartclear") smartPrompt = "";
           toolPending = tb.dataset.cmd; renderList();
           W.sendRequest(tb.dataset.cmd, "").catch(showErr);
           setTimeout(function () { toolPending = ""; if (view === "tools") renderList(); }, 2500);
