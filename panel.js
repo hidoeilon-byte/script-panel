@@ -599,8 +599,8 @@
   }
   function fltOk(t, isFb) {
     if (flt.c) { var cc = fltColorOf(t, isFb) || "none"; if (cc !== flt.c) return false; }
-    if (flt.ch && (t.text || "").indexOf(flt.ch) < 0) return false;
-    if (flt.st) { var ss = fltStageOf(t) || "לא שויך"; if (ss !== flt.st) return false; }
+    if (flt.ch) { var chOk = (isFb && t.ch) ? t.ch === flt.ch : (t.text || "").indexOf(flt.ch) >= 0; if (!chOk) return false; }
+    if (flt.st) { var ss = (isFb && t.pt) ? t.pt : (fltStageOf(t) || "לא שויך"); if (ss !== flt.st) return false; }
     return true;
   }
   function loadCharNames() {
@@ -615,6 +615,11 @@
       });
       renderList();
     }).catch(function () {});
+  }
+  function fbCharOpts(cur) {
+    var names = (charNames || []).slice();
+    if (cur && names.indexOf(cur) < 0) names.push(cur);
+    return names.map(function (n) { return '<option value="' + esc(n) + '"' + (cur === n ? " selected" : "") + '>' + esc(n) + '</option>'; }).join("");
   }
   function fltBar() {
     loadCharNames();
@@ -658,8 +663,10 @@
       var col = t.cu !== undefined ? t.cu : fbCatColor(t);
       return '<div class="todoitem' + (t.done ? " done" : "") + '" data-i="' + k + '"' + (col ? ' style="border-inline-start:6px solid ' + col + '"' : "") + '>' +
         '<button class="todocheck fbcheck" data-i="' + k + '">' + (t.done ? "✓" : "") + '</button>' +
-        '<div class="todobody"><div class="todotext">' + esc(t.text) + '</div>' +
+        '<div class="todobody"><textarea class="fbta" data-i="' + k + '" rows="2">' + esc(t.text) + '</textarea>' +
         (t.sn ? '<button class="linkbtn fbscene" data-sn="' + t.sn + '">📍 סצנה ' + t.sn + '</button>' : '') + '</div>' +
+        '<div class="fbmeta"><select class="fbch" data-i="' + k + '"><option value="">דמות: —</option>' + fbCharOpts(t.ch) + '</select>' +
+        '<select class="fbpt" data-i="' + k + '"><option value="">חלק: —</option>' + STAGES.map(function (x) { return '<option value="' + x + '"' + (t.pt === x ? " selected" : "") + '>' + x + '</option>'; }).join("") + '</select></div>' +
         '<div class="todoacts">' + curBtn + '<div class="fbdots">' + dots + '</div><button class="linkbtn fbdel" data-i="' + k + '">מחק</button></div></div>';
     }).join("") + '</div>';
     if (!fbItems.length) html += '<div class="empty">עוד אין פריטים מהשיחה עם המרצה.</div>';
@@ -681,7 +688,7 @@
       if (!fltOk(t, false)) return "";
       return '<div class="todoitem' + (t.done ? " done" : "") + '" data-i="' + k + '"' + (t.c ? ' style="border-inline-start:6px solid ' + t.c + '"' : "") + '>' +
         '<button class="todocheck" data-i="' + k + '">' + (t.done ? "✓" : "") + '</button>' +
-        '<div class="todobody"><textarea class="fbta" data-i="' + k + '" rows="2">' + esc(t.text) + '</textarea>' +
+        '<div class="todobody"><textarea class="ptta" data-i="' + k + '" rows="2">' + esc(t.text) + '</textarea>' +
         (t.scene ? '<button class="linkbtn todoscene" data-i="' + k + '">📍 ' + esc(t.scene) + '</button>' : '') +
         (todoLinking === String(k) ? '<div class="todolink">בחר כותרת סצנה בתסריט, ואז לחץ "קשר כאן"<br><button class="lb on" id="todolinkok" data-i="' + k + '">קשר לסצנה הנוכחית</button></div>' : '') +
         '</div><div class="todoacts"><button class="fbcur todocur" data-i="' + k + '" title="שנה צבע" style="background:' + (t.c || "transparent") + '"></button>' +
@@ -1028,7 +1035,15 @@
         flt[e.target.id === "fltc" ? "c" : e.target.id === "fltch" ? "ch" : "st"] = e.target.value;
         renderList(); return;
       }
-      if (!e.target.classList || !e.target.classList.contains("fbta")) return;
+      var tc = e.target.classList || { contains: function () { return false; } };
+      if (tc.contains("ptta")) {
+        var pi = +e.target.dataset.i, pv = e.target.value.trim();
+        if (todos && todos[pi] && pv && pv !== todos[pi].text) { todos[pi].text = pv; saveTodos(); }
+        return;
+      }
+      if (tc.contains("fbch")) { fbItems[+e.target.dataset.i].ch = e.target.value; saveFeedback(); return; }
+      if (tc.contains("fbpt")) { fbItems[+e.target.dataset.i].pt = e.target.value; saveFeedback(); return; }
+      if (!tc.contains("fbta")) return;
       var fi2 = +e.target.dataset.i, nv = e.target.value.trim();
       if (fbItems && fbItems[fi2] && nv && nv !== fbItems[fi2].text) { fbItems[fi2].text = nv; saveFeedback(); }
   });
@@ -1107,8 +1122,11 @@
             t = t.replace(/^[-•*]\s*/, "");
             var sm = t.match(/סצנ(?:ה|ות)\s*(\d+)/);
             var sn = sm ? +sm[1] : 0;
+            var chm = t.match(/דמות:\s*([^|]+)/), ptm = t.match(/חלק:\s*([^|]+)/);
+            var ch = chm ? chm[1].trim() : "", pt = ptm ? ptm[1].trim() : "";
             var clean = sm ? t.replace(/^סצנ(?:ה|ות)[^:\[]*:\s*/, "").trim() : t;
-            fbItems.push({ text: clean || t, done: false, sn: sn }); fn++;
+            clean = clean.replace(/\|?\s*דמות:[^|]*/g, "").replace(/\|?\s*חלק:[^|]*/g, "").trim();
+            fbItems.push({ text: clean || t, done: false, sn: sn, ch: ch, pt: STAGES.indexOf(pt) >= 0 ? pt : "" }); fn++;
           });
           fbPaste = "";
           if (fn) saveFeedback();

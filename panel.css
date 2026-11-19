@@ -336,3 +336,7 @@ body.compact #bar .cnt { display: none; }
 .fbta:focus { border-color: var(--accent); background: var(--bg); }
 .fltbar { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0 8px; }
 .fltbar select { font: inherit; font-size: 12px; padding: 3px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); max-width: 100%; }
+.fbmeta { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+.fbmeta select { font: inherit; font-size: 11.5px; padding: 2px 4px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg); color: var(--ink); max-width: 100%; }
+.ptta { width: 100%; box-sizing: border-box; font: inherit; font-size: 13px; line-height: 1.45; border: 1px solid transparent; border-radius: 5px; background: transparent; color: var(--ink); padding: 3px 4px; resize: vertical; }
+.ptta:focus { border-color: var(--accent); background: var(--bg); }
