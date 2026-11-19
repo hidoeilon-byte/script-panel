@@ -229,3 +229,5 @@ header { padding: 10px 10px 8px; border-bottom: 1px solid var(--line); }
 .nk-cmp { background: #c9b8f0; color: #24104a; }
 .promptbox { margin-top: 6px; }
 .promptbox textarea { width: 100%; box-sizing: border-box; font: inherit; font-size: 11.5px; line-height: 1.4; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); padding: 5px; resize: vertical; margin-bottom: 4px; }
+.walkbox { border: 1px solid var(--line); background: var(--card); border-radius: 7px; padding: 6px; margin-bottom: 7px; }
+.walkbox .chgrow { justify-content: space-between; }
