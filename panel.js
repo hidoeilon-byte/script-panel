@@ -652,6 +652,7 @@
       '<textarea id="fbpaste" rows="4" placeholder="הדבק כאן את הרשימה, שורה לכל פריט. למשל: [לשנות] …">' + esc(fbPaste) + '</textarea>' +
       '<button class="lb on" id="fbpasteok">הוסף לרשימה</button> <span class="chgstat" id="fbres"></span></div></details>' +
       '<div class="chgctl"><div class="chgrow"><span class="chgstat">' + open + ' פתוחים מתוך ' + fbItems.length + '</span></div></div>';
+    html += fltBar();
     html += '<div class="fblegend"><span class="lbl">מקרא:</span> ' +
       [["לשנות", "#ef4444"], ["להוסיף", "#22c55e"], ["להסיר", "#f59e0b"], ["לבדוק", "#3b82f6"], ["כללי", "#a855f7"]].map(function (x) {
         return '<button class="fbleg' + (flt.c === x[1] ? " on" : "") + '" data-c="' + x[1] + '"><i style="background:' + x[1] + '"></i>' + x[0] + '</button>';
@@ -672,7 +673,6 @@
         '</div><div class="todoacts">' + (t.sn ? '<button class="linkbtn fbscene" data-sn="' + t.sn + '">📍 סצנה ' + t.sn + '</button>' : '') + '<div class="fbcap" data-i="' + k + '">' + esc([(t.ch || "דמות?"), (t.pt || fltStageOf(t) || "חלק?")].join(" · ")) + '</div>' + curBtn + '<div class="fbdots">' + dots + '</div><button class="linkbtn fbdel" data-i="' + k + '">מחק</button></div></div>';
     }).join("") + '</div>';
     if (!fbItems.length) html += '<div class="empty">עוד אין פריטים מהשיחה עם המרצה.</div>';
-    html = fltBar() + html;
     list.innerHTML = html;
   }
   function saveFeedback() { W.saveFeedback(fbItems); }
