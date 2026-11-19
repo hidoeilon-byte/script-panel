@@ -305,7 +305,8 @@
         });
       });
     },
-    // sug: {kind:"add", after:"", lines:[{style,text}]} | {kind:"replace", old:"", neu:""}
+    // sug.ops: [{op:"replace",old,neu} | {op:"delete",old} | {op:"delpara",old} | {op:"add",after,lines:[{style,text}]}]
+    // every target is located first; nothing changes unless all of them are found
     applySuggestion: function (id, sug) {
       return run(function (ctx) {
         var cs = ctx.document.body.getComments();
@@ -313,28 +314,38 @@
         return ctx.sync().then(function () {
           var c = cs.items.filter(function (x) { return x.id === id; })[0];
           if (!c) throw new Error("ההערה לא נמצאה במסמך");
-          var para = c.getRange().paragraphs.getLast();
-          if (sug.kind === "replace") {
-            if (!sug.old || sug.old.length > 250) throw new Error("הקטע להחלפה חסר או ארוך מדי");
-            var inPara = c.getRange().paragraphs.getFirst().search(sug.old, { matchCase: true });
-            var inBody = ctx.document.body.search(sug.old, { matchCase: true });
-            inPara.load("items"); inBody.load("items");
-            return ctx.sync().then(function () {
-              var hit = inPara.items[0] || inBody.items[0];
-              if (!hit) throw new Error("הקטע \"" + sug.old.slice(0, 40) + "…\" לא נמצא בתסריט");
-              hit.insertText(sug.neu, "Replace");
-              c.resolved = true;
-              return ctx.sync();
-            });
-          }
-          var findAfter = sug.after ? ctx.document.body.search(sug.after.slice(0, 250), { matchCase: true }) : null;
-          if (findAfter) findAfter.load("items");
+          var anchorPara = c.getRange().paragraphs.getFirst();
+          var finds = sug.ops.map(function (o) {
+            var key = o.op === "add" ? o.after : o.old;
+            if (!key) return null;
+            if (key.length > 250) throw new Error("קטע ארוך מדי: " + key.slice(0, 30) + "…");
+            var f = { para: anchorPara.search(key, { matchCase: true }), body: ctx.document.body.search(key, { matchCase: true }) };
+            f.para.load("items"); f.body.load("items");
+            if (o.op === "delete") { f.sp = ctx.document.body.search(key + " ", { matchCase: true }); f.sp.load("items"); }  // take the following space too
+            return f;
+          });
           return ctx.sync().then(function () {
-            var base = findAfter && findAfter.items[0] ? findAfter.items[0].paragraphs.getLast() : para;
-            sug.lines.forEach(function (ln) {
-              base = base.insertParagraph(ln.text, "After");
-              base.style = ln.style;
-              base.font.highlightColor = null;
+            var hits = sug.ops.map(function (o, k) {
+              var f = finds[k];
+              if (!f) return null;
+              var h = (f.sp && f.sp.items[0]) || f.para.items[0] || f.body.items[0];
+              if (!h) throw new Error("לא נמצא בתסריט: \"" + (o.op === "add" ? o.after : o.old).slice(0, 40) + "\"");
+              return h;
+            });
+            var basePara = c.getRange().paragraphs.getLast();
+            sug.ops.forEach(function (o, k) {
+              var h = hits[k];
+              if (o.op === "replace") h.insertText(o.neu, "Replace");
+              else if (o.op === "delete") h.insertText("", "Replace");
+              else if (o.op === "delpara") h.paragraphs.getFirst().delete();
+              else {
+                var base = h ? h.paragraphs.getLast() : basePara;
+                o.lines.forEach(function (ln) {
+                  base = base.insertParagraph(ln.text, "After");
+                  base.style = ln.style;
+                  base.font.highlightColor = null;
+                });
+              }
             });
             c.resolved = true;
             return ctx.sync();

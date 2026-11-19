@@ -265,3 +265,6 @@ header { padding: 10px 10px 8px; border-bottom: 1px solid var(--line); }
 .instrbox { border: 1px solid var(--accent); border-radius: 6px; padding: 5px; background: var(--bg); }
 .instrbox textarea { width: 100%; box-sizing: border-box; font: inherit; font-size: 12.5px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg); color: var(--ink); padding: 4px; margin-bottom: 4px; }
 .instrbtn { width: 100%; font-size: 12.5px; padding: 5px; }
+.sugsep { border-top: 1px dotted var(--line); margin: 4px 0; }
+.decide { display: flex; gap: 5px; flex-wrap: wrap; }
+.decide .lb { flex: 1; padding: 6px; }
