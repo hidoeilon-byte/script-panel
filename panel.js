@@ -30,6 +30,7 @@
   var curScene = -1;
   var editing = -1;
   var view = "heads";   // heads | struct
+  var lastSub = { script: "heads", notes: "notes", tools: "changes" };   // remembered sub-tab per group
   var showSyn = true;
   var filter = null;    // plot id
   var collapsed = {};   // sequence start index -> true
@@ -46,6 +47,7 @@
 
   showSyn = lsGet("showSyn", "1") !== "0";
   view = lsGet("view", "heads");
+  lastSub[groupOf(view)] = view;
 
   // ---------- data
   function persist() {
@@ -126,8 +128,7 @@
       return '<button class="sbtn" data-style="' + esc(s.name) + '" title="' + esc(s.name) + '">' +
         '<span class="sl">' + esc(s.label) + '</span>' + (IOS ? "" : '<span class="sk">' + s.key + '</span>') + '</button>';
     }).join("") +
-      '<button class="sbtn cyc" data-dir="-1" title="סוג השורה הקודם (Shift+Tab)"><span class="sl">⇤ סוג קודם</span></button>' +
-      '<button class="sbtn cyc" data-dir="1" title="סוג השורה הבא (Tab)"><span class="sl">סוג הבא ⇥</span></button>';
+      '';
     if (IOS) {
       var hint = document.querySelector(".tabhint");
       if (hint) hint.textContent = "סוג הבא מחליף סוג שורה";
@@ -152,16 +153,23 @@
     return '<span class="chip' + (extra || "") + '" data-plot="' + esc(p.id) + '" style="background:' + p.c + '">' + esc(p.n) + '</span>';
   }
 
+  // three groups; each group has two sub-tabs
+  var GROUPS = [
+    { g: "script", t: "תסריט", subs: [["heads", "כותרות"], ["struct", "מבנה"]] },
+    { g: "notes", t: "הערות", subs: [["notes", "הערות"], ["todo", "שלי"]] },
+    { g: "tools", t: "כלים", subs: [["changes", "שינויים"], ["tools", "כלים"]] }
+  ];
+  function groupOf(v) { return v === "heads" || v === "struct" ? "script" : v === "notes" || v === "todo" ? "notes" : "tools"; }
   function renderBar() {
+    var cur = groupOf(view), gb = GROUPS.filter(function (x) { return x.g === cur; })[0];
     $("bar").innerHTML =
-      '<div class="seg">' +
-        '<button data-view="heads" class="' + (view === "heads" ? "on" : "") + '">כותרות</button>' +
-        '<button data-view="struct" class="' + (view === "struct" ? "on" : "") + '">מבנה</button>' +
-        '<button data-view="changes" class="' + (view === "changes" ? "on" : "") + '">שינויים</button>' +
-        '<button data-view="todo" class="' + (view === "todo" ? "on" : "") + '">שלי</button>' +
-        '<button data-view="notes" class="' + (view === "notes" ? "on" : "") + '">הערות' + (openNotes() ? ' <span class="badge">' + openNotes() + '</span>' : '') + '</button>' +
-        '<button data-view="tools" class="' + (view === "tools" ? "on" : "") + '">כלים</button>' +
-      '</div>' +
+      '<div class="seg">' + GROUPS.map(function (x) {
+        return '<button data-group="' + x.g + '" class="' + (x.g === cur ? "on" : "") + '">' + x.t +
+          (x.g === "notes" && openNotes() ? ' <span class="badge">' + openNotes() + '</span>' : '') + '</button>';
+      }).join("") + '</div>' +
+      '<div class="seg sub">' + gb.subs.map(function (sv) {
+        return '<button data-view="' + sv[0] + '" class="' + (view === sv[0] ? "on" : "") + '">' + sv[1] + '</button>';
+      }).join("") + '</div>' +
       '<span class="cnt">' + (scenes.length ? scenes.length + " סצנות" : "") + '</span>' +
       '<span class="sp"></span>' +
       (view === "heads" ? '<label><input type="checkbox" id="showsyn"' + (showSyn ? " checked" : "") + '> תקצירים</label>' :
@@ -756,10 +764,21 @@
   // ---------- events
   function wire() {
     $("bar").addEventListener("click", function (e) {
+      var gg = e.target.closest("[data-group]");
+      if (gg) {
+        var grp = GROUPS.filter(function (x) { return x.g === gg.dataset.group; })[0];
+        var last = lastSub[grp.g];
+        var pick = grp.subs.filter(function (sv) { return sv[0] === last; }).length ? last : grp.subs[0][0];
+        if (view === "notes" && pick !== "notes") { markOff(); cardEdit = false; cardMode = false; }
+        view = pick; lsSet("view", view); editing = -1; render();
+        if (view === "changes") { refreshChanges().then(function () { if (!chg || !chg.last) W.sendRequest && W.sendRequest("info", ""); }); }
+        if (view === "notes") { refreshNotes(); }
+        return;
+      }
       var v = e.target.closest("[data-view]");
       if (v) {
         if (view === "notes" && v.dataset.view !== "notes") { markOff(); cardEdit = false; cardMode = false; }
-        view = v.dataset.view; lsSet("view", view); editing = -1; render();
+        view = v.dataset.view; lastSub[groupOf(view)] = view; lsSet("view", view); editing = -1; render();
         if (view === "changes") { refreshChanges().then(function () { if (!chg || !chg.last) W.sendRequest && W.sendRequest("info", ""); }); }
         if (view === "notes") { refreshNotes(); }
         return;

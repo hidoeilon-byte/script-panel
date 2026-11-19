@@ -282,3 +282,5 @@ header { padding: 10px 10px 8px; border-bottom: 1px solid var(--line); }
 .todotext { font-size: 13px; line-height: 1.45; word-break: break-word; }
 .todoacts { display: flex; flex-direction: column; gap: 3px; align-items: flex-end; }
 .todolink { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
+.seg.sub { margin-top: 4px; }
+.seg.sub button { font-size: 12px; }
