@@ -645,7 +645,7 @@
       '<div class="chgctl"><div class="chgrow"><span class="chgstat">' + open + ' פתוחים מתוך ' + fbItems.length + '</span></div></div>';
     html += '<div class="fblegend"><span class="lbl">מקרא:</span> ' +
       [["לשנות", "#ef4444"], ["להוסיף", "#22c55e"], ["להסיר", "#f59e0b"], ["לבדוק", "#3b82f6"], ["כללי", "#a855f7"]].map(function (x) {
-        return '<span class="fbleg"><i style="background:' + x[1] + '"></i>' + x[0] + '</span>';
+        return '<span class="fbleg" title="' + x[0] + '"><i style="background:' + x[1] + '"></i></span>';
       }).join("") + '</div>';
     html = fltBar() + html;
     html += '<div class="chglist">' + fbItems.map(function (t, k) {
