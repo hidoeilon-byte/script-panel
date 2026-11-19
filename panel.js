@@ -48,6 +48,7 @@
   showSyn = lsGet("showSyn", "1") !== "0";
   view = lsGet("view", "heads");
   lastSub[groupOf(view)] = view;
+  if (lsGet("compact", "") === "1") document.body.classList.add("compact");
 
   // ---------- data
   function persist() {
@@ -171,6 +172,7 @@
         return '<button data-view="' + sv[0] + '" class="' + (view === sv[0] ? "on" : "") + '">' + sv[1] + '</button>';
       }).join("") + '</div>' +
       '<span class="cnt">' + (scenes.length ? scenes.length + " סצנות" : "") + '</span>' +
+      '<button class="icon" id="barfold" title="הסתר או הצג את סרגל הכלים למעלה" aria-label="הסתר או הצג סרגל">' + (document.body.classList.contains("compact") ? "▾" : "▴") + '</button>' +
       '<span class="sp"></span>' +
       (view === "heads" ? '<label><input type="checkbox" id="showsyn"' + (showSyn ? " checked" : "") + '> תקצירים</label>' :
         view === "struct" ? '<button class="icon" id="fold" title="כווץ או פתח את כל הסיקוונסים">' + (allCollapsed() ? "⊞" : "⊟") + '</button>' : "") +
@@ -764,6 +766,11 @@
   // ---------- events
   function wire() {
     $("bar").addEventListener("click", function (e) {
+      if (e.target.closest("#barfold")) {
+        var cmp = !document.body.classList.contains("compact");
+        document.body.classList.toggle("compact", cmp); lsSet("compact", cmp ? "1" : "");
+        renderBar(); return;
+      }
       var gg = e.target.closest("[data-group]");
       if (gg) {
         var grp = GROUPS.filter(function (x) { return x.g === gg.dataset.group; })[0];

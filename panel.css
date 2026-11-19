@@ -284,3 +284,5 @@ header { padding: 10px 10px 8px; border-bottom: 1px solid var(--line); }
 .todolink { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
 .seg.sub { margin-top: 4px; }
 .seg.sub button { font-size: 12px; }
+body.compact #styles, body.compact .status, body.compact #markbar, body.compact #locbox, body.compact #plotbar { display: none !important; }
+body.compact #bar .cnt { display: none; }
