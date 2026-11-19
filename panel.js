@@ -638,7 +638,7 @@
     var stOpts = [""].concat(STAGES, ["לא שויך"]);
     return '<div class="fltbar">' +
       '<select id="fltch"><option value="">כל הדמויות</option>' + (charNames || []).map(function (n) { return '<option value="' + esc(n) + '"' + (flt.ch === n ? " selected" : "") + '>' + esc(n) + '</option>'; }).join("") + '</select>' +
-      '<select id="fltst"><option value="">כל החלקים</option>' + STAGES.map(function (x) { return '<option value="' + x + '"' + (flt.st === x ? " selected" : "") + '>' + x + '</option>'; }).join("") + '</select>' +
+      '<select id="fltst"><option value="">כל החלקים</option>' + STAGES.map(function (x) { return '<option value="' + x + '" style="color:' + STAGE_COLORS[x] + '"' + (flt.st === x ? " selected" : "") + '>● ' + x + '</option>'; }).join("") + '</select>' +
       '</div>';
   }
 
