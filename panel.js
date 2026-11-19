@@ -599,7 +599,7 @@
   }
   function fltOk(t, isFb) {
     if (flt.c) { var cc = fltColorOf(t, isFb) || "none"; if (cc !== flt.c) return false; }
-    if (flt.ch) { var chOk = (isFb && t.ch) ? t.ch === flt.ch : (t.text || "").indexOf(flt.ch) >= 0; if (!chOk) return false; }
+    if (flt.ch) { var chOk = (isFb && t.ch) ? t.ch.split(",").map(function (x) { return x.trim(); }).indexOf(flt.ch) >= 0 : (t.text || "").indexOf(flt.ch) >= 0; if (!chOk) return false; }
     if (flt.st) { var ss = (isFb && t.pt) ? t.pt : (fltStageOf(t) || "לא שויך"); if (ss !== flt.st) return false; }
     return true;
   }
@@ -657,6 +657,7 @@
       [["לשנות", "#ef4444"], ["להוסיף", "#22c55e"], ["להסיר", "#f59e0b"], ["לבדוק", "#3b82f6"], ["כללי", "#a855f7"]].map(function (x) {
         return '<button class="fbleg' + (flt.c === x[1] ? " on" : "") + '" data-c="' + x[1] + '"><i style="background:' + x[1] + '"></i>' + x[0] + '</button>';
       }).join("") + '</div>';
+    html += '<datalist id="charlist">' + (charNames || []).map(function (n) { return '<option value="' + esc(n) + '">'; }).join("") + '</datalist>';
     html += '<div class="chglist">' + fbItems.map(function (t, k) {
       if (!fltOk(t, true)) return "";
       var cols = ["#ef4444", "#f59e0b", "#22c55e", "#3b82f6", "#a855f7"];
@@ -668,7 +669,7 @@
       return '<div class="todoitem' + (t.done ? " done" : "") + '" data-i="' + k + '"' + (col ? ' style="border-inline-start:6px solid ' + col + '"' : "") + '>' +
         '<button class="todocheck fbcheck" data-i="' + k + '">' + (t.done ? "✓" : "") + '</button>' +
         '<div class="todobody"><textarea class="fbta" data-i="' + k + '" rows="2">' + esc(String(t.text || "").replace(/^\s*\[[^\]]+\]\s*/, "")) + '</textarea>' +
-        (fbMeta === k ? '<div class="fbmeta"><select class="fbch" data-i="' + k + '"><option value="">דמות</option>' + fbCharOpts(t.ch) + '</select>' +
+        (fbMeta === k ? '<div class="fbmeta"><input class="fbch" list="charlist" data-i="' + k + '" value="' + esc(t.ch || "") + '" placeholder="דמות, דמות">' +
         '<select class="fbpt" data-i="' + k + '"><option value="">חלק</option>' + STAGES.map(function (x) { return '<option value="' + x + '"' + ((t.pt || fltStageOf(t)) === x ? " selected" : "") + '>' + x + '</option>'; }).join("") + '</select></div>' : '') +
         '</div><div class="todoacts">' + (t.sn ? '<button class="linkbtn fbscene" data-sn="' + t.sn + '">📍 סצנה ' + t.sn + '</button>' : '') + '<div class="fbcap" data-i="' + k + '">' + esc([(t.ch || "דמות?"), (t.pt || fltStageOf(t) || "חלק?")].join(" · ")) + '</div>' + curBtn + '<div class="fbdots">' + dots + '</div><button class="linkbtn fbdel" data-i="' + k + '">מחק</button></div></div>';
     }).join("") + '</div>';
@@ -1045,7 +1046,7 @@
         if (todos && todos[pi] && pv && pv !== todos[pi].text) { todos[pi].text = pv; saveTodos(); }
         return;
       }
-      if (tc.contains("fbch")) { fbItems[+e.target.dataset.i].ch = e.target.value; saveFeedback(); return; }
+      if (tc.contains("fbch")) { fbItems[+e.target.dataset.i].ch = e.target.value.split(",").map(function (x) { return x.trim(); }).filter(Boolean).join(", "); saveFeedback(); return; }
       if (tc.contains("fbpt")) { fbItems[+e.target.dataset.i].pt = e.target.value; saveFeedback(); return; }
       if (!tc.contains("fbta")) return;
       var fi2 = +e.target.dataset.i, nv = e.target.value.trim();

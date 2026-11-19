@@ -371,3 +371,4 @@ body.noheader #styles, body.noheader .status, body.noheader #locbox { display: n
 .todoitem .todoacts .fbcap { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 45%; }
 .todoitem .todoacts .fbmeta { flex: 1 1 100%; }
 .todoitem .todoacts .fbdel { order: 0; margin-inline-start: 0; }
+.fbmeta input.fbch { font: inherit; font-size: 12px; padding: 3px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); flex: 1 1 160px; min-width: 0; }
