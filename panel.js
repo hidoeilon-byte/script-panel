@@ -588,7 +588,7 @@
     window.scrollTo(0, y); list.scrollTop = sy;
   }
   // ---------- משוב: a list from a conversation with the lecturer (own tab, own storage)
-  var fbItems = null, fbPaste = "", fbPick = -1, fbEdit = -1;
+  var fbItems = null, fbPaste = "", fbPick = -1, fbEdit = -1, todoPick = -1;
   // colour per category Claude writes in brackets: set from the start, the user can still change it per item
   var FB_CAT_COLORS = { "לשנות": "#ef4444", "להוסיף": "#22c55e", "להסיר": "#f59e0b", "לבדוק": "#3b82f6", "כללי": "#a855f7" };
   function fbCatColor(t) {
@@ -635,12 +635,14 @@
       '<div class="todoadd"><input id="todoin" type="text" placeholder="מחשבה או משהו לעבוד עליו…" value="' + esc(todoDraft) + '">' +
       '<button class="lb on" id="todoadd">הוסף</button></div></div>';
     html += '<div class="chglist">' + todos.map(function (t, k) {
-      return '<div class="todoitem' + (t.done ? " done" : "") + '" data-i="' + k + '">' +
+      return '<div class="todoitem' + (t.done ? " done" : "") + '" data-i="' + k + '"' + (t.c ? ' style="border-inline-start:6px solid ' + t.c + '"' : "") + '>' +
         '<button class="todocheck" data-i="' + k + '">' + (t.done ? "✓" : "") + '</button>' +
         '<div class="todobody"><textarea class="fbta" data-i="' + k + '" rows="2">' + esc(t.text) + '</textarea>' +
         (t.scene ? '<button class="linkbtn todoscene" data-i="' + k + '">📍 ' + esc(t.scene) + '</button>' : '') +
         (todoLinking === String(k) ? '<div class="todolink">בחר כותרת סצנה בתסריט, ואז לחץ "קשר כאן"<br><button class="lb on" id="todolinkok" data-i="' + k + '">קשר לסצנה הנוכחית</button></div>' : '') +
-        '</div><div class="todoacts"><button class="linkbtn askclaude-todo" data-i="' + k + '">שלח ל-Claude</button><button class="linkbtn todolinkbtn" data-i="' + k + '">קשר</button>' +
+        '</div><div class="todoacts"><button class="fbcur todocur" data-i="' + k + '" title="שנה צבע" style="background:' + (t.c || "transparent") + '"></button>' +
+        (todoPick === k ? '<div class="fbdots">' + [["#ef4444"], ["#f59e0b"], ["#22c55e"], ["#3b82f6"], ["#a855f7"]].map(function (c) { return '<button class="fbdot todocol' + (t.c === c[0] ? " on" : "") + '" data-i="' + k + '" data-c="' + c[0] + '" style="background:' + c[0] + '"></button>'; }).join("") + '<button class="fbdot fbdot-none todocol' + (!t.c ? " on" : "") + '" data-i="' + k + '" data-c=""></button></div>' : '') +
+        '<button class="linkbtn askclaude-todo" data-i="' + k + '">שלח ל-Claude</button><button class="linkbtn todolinkbtn" data-i="' + k + '">קשר</button>' +
         '<button class="linkbtn tododel" data-i="' + k + '">מחק</button></div></div>';
     }).join("") + '</div>';
     if (!todos.length) html += '<div class="empty">אין עדיין פריטים. כתוב כאן מחשבה, והיא תישאר במסמך.</div>';
@@ -1080,6 +1082,10 @@
       }
       if (view === "todo" && !e.target.closest("#colR")) {
         if (e.target.closest("#todoadd")) { todoDraft = $("todoin").value; todoAdd(); return; }
+        var tcur = e.target.closest(".todocur");
+        if (tcur) { var tci = +tcur.dataset.i; todoPick = todoPick === tci ? -1 : tci; renderTodo(list); return; }
+        var tcol = e.target.closest(".todocol");
+        if (tcol) { var tcn = +tcol.dataset.i; todos[tcn].c = tcol.dataset.c || ""; todoPick = -1; saveTodos(); renderTodo(list); return; }
         var tk = e.target.closest(".todocheck");
         if (tk) { var ti = +tk.dataset.i; todos[ti].done = !todos[ti].done; saveTodos(); renderList(); return; }
         var td = e.target.closest(".tododel");
