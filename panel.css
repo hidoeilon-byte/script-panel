@@ -343,3 +343,6 @@ body.compact #bar .cnt { display: none; }
 .fltcols { display: flex; gap: 5px; align-items: center; }
 .fltcol { width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--line); cursor: pointer; padding: 0; }
 .fltcol.on { outline: 2px solid var(--ink); outline-offset: 1px; }
+.todoitem .todobody { flex: 1 1 auto; min-width: 0; }
+.todoitem textarea { width: 100%; min-width: 0; box-sizing: border-box; }
+.fbmeta select { flex: 1 1 110px; }
