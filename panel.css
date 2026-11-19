@@ -260,3 +260,8 @@ header { padding: 10px 10px 8px; border-bottom: 1px solid var(--line); }
 .linkbtn { font: inherit; font-size: 11.5px; background: none; border: none; color: var(--accent); cursor: pointer; padding: 0; text-decoration: underline; }
 .cardfoot { font-size: 11.5px; color: var(--muted); text-align: center; }
 .startbox { border: 1px solid var(--line); background: var(--card); border-radius: 7px; padding: 8px; margin-bottom: 7px; display: flex; flex-direction: column; gap: 5px; align-items: stretch; text-align: center; }
+.waitbox { border-color: #c98a00; }
+.waitbox .sughead { color: #9a6a00; }
+.instrbox { border: 1px solid var(--accent); border-radius: 6px; padding: 5px; background: var(--bg); }
+.instrbox textarea { width: 100%; box-sizing: border-box; font: inherit; font-size: 12.5px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg); color: var(--ink); padding: 4px; margin-bottom: 4px; }
+.instrbtn { width: 100%; font-size: 12.5px; padding: 5px; }

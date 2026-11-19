@@ -266,6 +266,18 @@
       });
     },
 
+    replyNote: function (id, text) {
+      return run(function (ctx) {
+        var cs = ctx.document.body.getComments();
+        cs.load("items/id");
+        return ctx.sync().then(function () {
+          var c = cs.items.filter(function (x) { return x.id === id; })[0];
+          if (!c) throw new Error("ההערה לא נמצאה במסמך");
+          c.reply(text);
+          return ctx.sync();
+        });
+      });
+    },
     // --- review card: yellow mark on the note being worked on, and inserting a prepared suggestion
     markNote: function (id, on) {
       var self = window.WordBridge;

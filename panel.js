@@ -306,6 +306,7 @@
   var PROMPTS = {
     s2t: "השוואה חכמה, סינופסיס ← תסריט, במצב חסכוני: קרא כל סצנה ואת הערת העזר שלה פעם אחת בלבד, אל תכתוב ניתוח בצ'אט תוך כדי, וכל הערה עד שתי שורות. על כל כותרת סצנה בתסריט יש הערה שמתחילה ב\"סינופסיס\" ובה מה שהסינופסיס אומר על הסצנה. עבור סצנה אחרי סצנה, קרא את כל הטקסט של הסצנה ואת הערת הסינופסיס שלה, ומצא כל פעולה, פרט או רגע שכתובים בסינופסיס וחסרים בתסריט או קורים בו אחרת. על כל הבדל הוסף הערת Word (Comment) חדשה שמתחילה במילה \"השוואה:\": אם ההבדל קשור למשפט מסוים בתסריט, עגן את ההערה על המשפט הזה; אם משהו חסר לגמרי, עגן אותה על כותרת הסצנה. בהערה: מה כתוב בסינופסיס, ומה יש (או אין) בתסריט, בקצרה. אל תשנה טקסט בתסריט ואל תמחק הערות. אחרי כל הסצנות בדוק גם סתירות בין סצנות באותו מסמך (חפץ שעובר מקום, גיל, שם), וכל סתירה היא הערה שמתחילה ב\"השוואה: רצף:\". בסוף כתוב לי בצ'אט רק כמה הבדלים מצאת ובאילו סצנות, שורה לכל סצנה.",
     t2s: "השוואה חכמה, תסריט ← סינופסיס, במצב חסכוני: קרא כל סצנה ואת הערת העזר שלה פעם אחת בלבד, אל תכתוב ניתוח בצ'אט תוך כדי, וכל הערה עד שתי שורות. על כל כותרת סצנה בסינופסיס יש הערה שמתחילה ב\"תסריט:\" ובה הטקסט של הסצנה מהתסריט. עבור סצנה אחרי סצנה, השווה את הפסקאות של הסינופסיס להערת התסריט, ומצא כל פעולה או רגע משמעותי שקורה בתסריט וחסר בסינופסיס או מתואר בו אחרת. לא פרטים קטנים כמו משפטי דיאלוג או תפאורה. על כל הבדל הוסף הערת Word (Comment) חדשה שמתחילה במילה \"השוואה:\": עגן אותה על המשפט בסינופסיס שמתאר את הרגע, או על כותרת הסצנה אם הרגע חסר לגמרי. בהערה: מה קורה בתסריט, ומה כתוב (או לא כתוב) בסינופסיס, בקצרה. אל תשנה טקסט ואל תמחק הערות. אחרי כל הסצנות בדוק גם סתירות בין סצנות באותו מסמך (חפץ שעובר מקום, גיל, שם), וכל סתירה היא הערה שמתחילה ב\"השוואה: רצף:\". בסוף כתוב לי בצ'אט רק כמה הבדלים מצאת ובאילו סצנות, שורה לכל סצנה.",
+    instr: "ביצוע ההוראות שלי. בהערות ה-Word שמתחילות ב\"השוואה:\" ולא סומנו כטופלו, מצא את ההערות שהתשובה האחרונה שלהן מתחילה ב\"הוראה:\". זו הוראה שלי לתיקון. לכל הוראה: קרא את הסצנה של ההערה, וחפש במסמך את מילות המפתח של התיקון כדי לשמור על רצף בין הסצנות. הוסף להערה תשובה (Reply) חדשה, בפורמט המדויק הזה בלבד: שורה ראשונה \"הצעה: הוספה\" או \"הצעה: החלפה\" או \"הצעה: אין\". בהוספה: שורה לכל פסקה חדשה, שמתחילה בשם הסגנון בסוגריים מרובעים, [תיאור] או [דמות] או [דיאלוג] או [הערת בימוי], ואחריו הטקסט; הפסקאות נכנסות אחרי הפסקה שההערה מעוגנת אליה, ואם צריך פסקה אחרת, הוסף שורה \"אחרי: \" עם קטע מדויק ממנה, עד 100 תווים. בהחלפה: שורה \"במקום: \" עם הקטע המדויק מהתסריט, מילה במילה ועד 100 תווים, ושורה \"יבוא: \" עם הטקסט החדש. אם ההוראה דורשת שינוי גם במקום אחר בתסריט, הוסף שם הערת Word חדשה שמתחילה ב\"השוואה: המשך – \" ותיאור קצר, ולה תשובה עם הצעה באותו פורמט. אם אי אפשר לבצע את ההוראה בפורמט הזה (למשל שכתוב גדול), כתוב \"הצעה: אין\" ובשורה הבאה מה צריך לעשות. תיאור בזמן הווה, קצר וויזואלי; דיאלוג קצר, בקול של הדמויות. אל תשנה טקסט בתסריט, אל תסמן הערות כטופלו ואל תמחק הערות. בסוף כתוב בצ'אט רק כמה הצעות הוספת.",
     prep: "הכנת הצעות לכרטיס התיקונים. עבור פעם אחת על כל הערות ה-Word שמתחילות ב\"השוואה:\" ולא סומנו כטופלו. בתחילת העבודה קרא פעם אחת את כל התסריט, כדי לשמור על רצף בין הסצנות. לכל הערה הוסף תשובה (Reply) להערה עצמה, בפורמט המדויק הזה בלבד, בלי שום טקסט נוסף: שורה ראשונה \"הצעה: הוספה\" או \"הצעה: החלפה\" או \"הצעה: אין\". בהוספה: שורה לכל פסקה חדשה, שמתחילה בשם הסגנון בסוגריים מרובעים, [תיאור] או [דמות] או [דיאלוג] או [הערת בימוי], ואחריו הטקסט. הפסקאות נכנסות אחרי הפסקה שההערה מעוגנת אליה. אם הן צריכות להיכנס אחרי פסקה אחרת, הוסף שורה \"אחרי: \" ובה קטע מדויק מהפסקה ההיא, עד 100 תווים. בהחלפה: שורה \"במקום: \" ובה הקטע המדויק מהתסריט, מילה במילה ועד 100 תווים, ושורה \"יבוא: \" ובה הטקסט החדש. \"הצעה: אין\" כשההבדל דורש החלטה שלי ולא תיקון, ובשורה הבאה הסבר קצר. אם התיקון סותר משהו בסצנה אחרת, הוסף שורה \"רצף: \" עם הסצנה ומה צריך לתקן שם. תיאור בזמן הווה, קצר וויזואלי; דיאלוג קצר ומדובר, בקול של הדמויות. אל תשנה טקסט בתסריט, אל תסמן הערות כטופלו ואל תמחק הערות. בסוף כתוב בצ'אט רק כמה הצעות הוספת.",
     walk: "מעבר על ההשוואות. עבור איתי על הערות ה-Word שמתחילות ב\"השוואה:\" ועוד לא סומנו כטופלו, אחת אחת, לפי הסדר במסמך. הערה אחת בכל פעם. לכל הערה: 1. בחר במסמך את הטקסט שההערה מעוגנת אליו, כדי שאקפוץ אליו, וסמן אותו במרקר צהוב. 2. קרא רק את הסצנה של ההערה, לא את כל המסמך, וכתוב \"הערה N מתוך M\", את כותרת הסצנה ואת תוכן ההערה. 3. הצע ניסוח קצר לתוספת או לשינוי בתסריט, בפורמט הקרן ובסגנונות של התבנית, ואמור איפה בדיוק הוא נכנס. לפני ההצעה חפש במסמך (חיפוש, לא קריאה מלאה) את מילות המפתח שלה: חפצים, דמויות, מקומות. אם יש סתירה עם סצנה אחרת, כתוב אותה והצע גם שם תיקון. 4. שאל אותי: להכניס כמו שהצעת, לשנות (ואני אגיד מה), לדלג, או לסמן טופל בלי שינוי. אל תשנה טקסט לפני שעניתי. 5. לפני שעוברים להערה הבאה, תמיד הורד את המרקר הצהוב. 6. אחרי שינוי, או כשאמרתי טופל, סמן את ההערה כטופלה (Resolved). אם אי אפשר, הוסף להערה תשובה (Reply) שמתחילה במילה \"טופל\". בדילוג אל תסמן. אל תמחק הערות ואל תשנה טקסט אחר. אם מוצגים סימוני שינויים מול דראפט (מרקר צהוב או טקסט אפור מחוק), בקש ממני קודם ללחוץ \"הסתר\" בלשונית שינויים."
   };
@@ -320,9 +321,17 @@
 
   var STYLES_OK = ["תיאור", "דמות", "דיאלוג", "הערת בימוי", "כותרת סצנה"];
   function sugRaw(n) {
+    if (waiting(n)) return "";
     var r = (n.replies || []).filter(function (x) { return /^הצעה:/.test(x); });
     return r.length ? r[r.length - 1] : "";
   }
+  // the last of הצעה/הוראה replies decides: an instruction newer than any suggestion waits for Claude
+  function lastInstr(n) {
+    var rs = (n.replies || []).filter(function (x) { return /^(הצעה|הוראה):/.test(x); });
+    var l = rs[rs.length - 1] || "";
+    return /^הוראה:/.test(l) ? l.replace(/^הוראה:\s*/, "") : "";
+  }
+  function waiting(n) { return !!lastInstr(n); }
   function parseSug(raw) {
     if (!raw) return null;
     var ls = raw.replace(/[\r\u000b\u2028]/g, "\n").replace(/\s*(\[(?:תיאור|דמות|דיאלוג|הערת בימוי|כותרת סצנה)\]|במקום:|יבוא:|רצף:|אחרי:)/g, "\n$1").split("\n").map(function (l) { return l.trim(); }).filter(Boolean);
@@ -340,14 +349,14 @@
     sg.ok = sg.kind === "add" ? sg.lines.length > 0 : sg.kind === "replace" ? !!(sg.old && sg.neu) : false;
     return sg;
   }
-  var cardEdit = false, cardMsg = "", hlId = "", cardMode = false;
+  var cardEdit = false, cardMsg = "", hlId = "", cardMode = false, instrOpen = false;
   function markOff() {
     if (!hlId || !W.markNote) return Promise.resolve();
     var id = hlId; hlId = "";
     return W.markNote(id, false).catch(function () {});
   }
   function selectNote(id, isCompare) {
-    cardEdit = false; cardMsg = "";
+    cardEdit = false; cardMsg = ""; instrOpen = false;
     return markOff().then(function () {
       noteSel = id;
       renderList();
@@ -407,14 +416,14 @@
       });
       var changed = JSON.stringify(n) !== JSON.stringify(notes);
       notes = n;
-      if (changed) { renderBar(); if (view === "notes" && !cardEdit) renderList(); }
+      if (changed) { renderBar(); if (view === "notes" && !cardEdit && !instrOpen) renderList(); }
     }).catch(function () {});
   }
   function promptBox() {
     if (!walkOpen) return "";
     return '<div class="promptbox"><textarea id="walktext" readonly rows="5">' + esc(PROMPTS[walkOpen]) + '</textarea>' +
       '<button class="lb on" id="walkcopy">העתק</button> <span class="chgstat" id="walkcopied"></span>' +
-      '<div class="toolnote">' + (walkOpen === "prep" ? 'מדביקים ל-Claude ב-Word. הוא מוסיף לכל הערה תשובה עם הצעה, ואז עוברים כאן בכרטיס.' : 'מדביקים ל-Claude ב-Word. הוא מציג הערה אחת, מציע ושואל לפני כל שינוי.') + '</div>' +
+      '<div class="toolnote">' + (walkOpen === "instr" ? 'מדביקים ל-Claude ב-Word. הוא הופך כל הוראה להצעה חדשה, ואז עוברים שוב בכרטיס ולוחצים "הכנס".' : walkOpen === "prep" ? 'מדביקים ל-Claude ב-Word. הוא מוסיף לכל הערה תשובה עם הצעה, ואז עוברים כאן בכרטיס.' : 'מדביקים ל-Claude ב-Word. הוא מציג הערה אחת, מציע ושואל לפני כל שינוי.') + '</div>' +
       '<div class="toolnote">לחיסכון: לפני שמדביקים, בחר Sonnet בתפריט המודל של Claude.</div></div>';
   }
   function renderCard(list, cmpOpen) {
@@ -430,7 +439,10 @@
       '<div class="cardbar"><span style="width:' + pct + '%"></span></div>' +
       '<div class="cardwhere">' + esc(cur.where || "") + '</div>' +
       '<div class="cardwhat">' + esc(cur.text.replace(/^השוואה:\s*/, "")) + '</div>';
-    if (raw) {
+    if (waiting(cur)) {
+      html += '<div class="sugbox waitbox"><div class="sughead">מחכה ל-Claude</div><div class="sugl">' + esc(lastInstr(cur)) + '</div>' +
+        '<div class="sugi">שולחים מלשונית ההערות: "שלח הוראות ל-Claude"</div></div>';
+    } else if (raw) {
       html += '<div class="sugbox"><div class="sughead">' + (sg.kind === "none" ? "Claude: צריך החלטה שלך" : "ההצעה של Claude") +
         (cardEdit ? '' : ' <button class="linkbtn" id="cardedit">ערוך</button>') + '</div>' +
         (cardEdit ? '<textarea id="cardtext" rows="6">' + esc(raw) + '</textarea><div class="toolnote">שמור על הפורמט: [תיאור] / [דמות] / [דיאלוג] בתחילת כל שורה, או במקום: / יבוא:</div>' +
@@ -438,12 +450,18 @@
     } else {
       html += '<div class="sugbox empty2">אין עדיין הצעה להערה הזו.<br><button class="linkbtn" id="prepshow">הכן הצעות עם Claude</button></div>';
     }
+    if (instrOpen) {
+      html += '<div class="instrbox"><div class="sughead">הוראה ל-Claude</div>' +
+        '<textarea id="instrtext" rows="4" placeholder="למשל: אור כן רואה את החיבוק, אבל רק בסוף הסצנה. תעדכן בהתאם גם את סצנה 10."></textarea>' +
+        '<div class="chgrow"><button class="lb on" id="instrsave">שמור והמשך</button><button class="linkbtn" id="instrcancel">בטל</button></div></div>';
+    }
     if (cardMsg) html += '<div class="toolnote cardmsg">' + esc(cardMsg) + '</div>';
     var canIns = raw && (sg.ok || cardEdit);
     html += '<div class="cardact">' +
       '<button class="bigbtn on" id="cardins"' + (canIns ? '' : ' disabled') + '>' + (cardEdit ? "הכנס ערוך" : "הכנס") + '</button>' +
       '<button class="bigbtn" id="cardskip">דלג</button>' +
       '<button class="bigbtn" id="cardok">✓ טופל</button></div>' +
+      (instrOpen ? '' : '<button class="bigbtn instrbtn" id="instropen">✎ הוראה ל-Claude</button>') +
       '<div class="cardfoot"><button class="linkbtn" id="prepshow">הכן הצעות עם Claude</button> · <button class="linkbtn" id="walkshow">מעבר בצ\'אט</button></div>' +
       promptBox() + '</div>';
     var sy = list.scrollTop;
@@ -463,10 +481,13 @@
       (synNoteCount ? '<div class="chgrow"><span class="chgstat">' + synNoteCount + ' הערות עזר מוסתרות (להסרה: כלים ← סיום השוואה)</span></div>' : '') + '</div>';
     if (cmpOpen.length) {
       var withSug = cmpOpen.filter(function (n) { return !!sugRaw(n); }).length;
+      var nWait = cmpOpen.filter(waiting).length;
+      if (nWait) html += '<div class="startbox waitbox"><span class="chgstat">' + nWait + (nWait === 1 ? ' הוראה מחכה' : ' הוראות מחכות') + ' ל-Claude</span>' +
+        '<button class="bigbtn on" id="instrsend">שלח הוראות ל-Claude</button>' + (walkOpen === "instr" ? promptBox() : '') + '</div>';
       html += '<div class="startbox"><button class="bigbtn on" id="cardstart">▶ עבור על ההשוואות</button>' +
         '<span class="chgstat">' + cmpOpen.length + ' פתוחות' + (withSug ? ', ' + withSug + ' עם הצעה מוכנה' : ', עוד בלי הצעות') + '</span>' +
         '<div class="cardfoot"><button class="linkbtn" id="prepshow">הכן הצעות עם Claude</button> · <button class="linkbtn" id="walkshow">מעבר בצ\'אט</button></div>' +
-        promptBox() + '</div>';
+        (walkOpen !== "instr" ? promptBox() : '') + '</div>';
     }
     if (!shown.length) {
       html += '<div class="empty">' + (notes.length ? "כל ההערות טופלו." : "אין הערות במסמך.") +
@@ -735,6 +756,19 @@
     list.addEventListener("click", function (e) {
       if (view === "notes") {
         if (e.target.id === "notedone") { showDone = e.target.checked; renderList(); return; }
+        if (e.target.closest("#instrsend")) { walkOpen = walkOpen === "instr" ? false : "instr"; renderList(); return; }
+        if (e.target.closest("#instropen")) { instrOpen = true; cardMsg = ""; renderList(); var it = $("instrtext"); if (it) it.focus(); return; }
+        if (e.target.closest("#instrcancel")) { instrOpen = false; renderList(); return; }
+        if (e.target.closest("#instrsave")) {
+          var txt = ($("instrtext").value || "").trim(), iid = noteSel;
+          if (!txt) { cardMsg = "כתוב הוראה לפני השמירה."; instrOpen = false; renderList(); return; }
+          instrOpen = false; cardMsg = "שומר…"; renderList();
+          W.replyNote(iid, "הוראה: " + txt.replace(/\s*\n\s*/g, " ")).then(function () {
+            cardMsg = "";
+            return refreshNotes().then(function () { stepCmp(1); });
+          }).catch(function (er) { cardMsg = "לא נשמר: " + (er && er.message ? er.message : er); renderList(); });
+          return;
+        }
         if (e.target.closest("#cardstart")) {
           cardMode = true; walkOpen = false;
           var co0 = openCmp(), withS = co0.filter(function (n) { return !!sugRaw(n); });
