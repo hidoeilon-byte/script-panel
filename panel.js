@@ -590,7 +590,7 @@
   // ---------- filters for the personal and feedback lists (colour, character, part of the structure)
   var flt = { c: "", ch: "", st: "" }, charNames = null, colOpen = false;
   function fltColorOf(t, isFb) {
-    if (isFb) return t.cu !== undefined ? t.cu : fbCatColor(t);
+    if (isFb) return stageColorOf(t);
     return t.c || "";
   }
   function fltStageOf(t) {
@@ -635,6 +635,11 @@
   var fbItems = null, fbPaste = "", fbPick = -1, fbEdit = -1, todoPick = -1, fbMeta = -1;
   // colour per category Claude writes in brackets: set from the start, the user can still change it per item
   var FB_CAT_COLORS = { "לשנות": "#ef4444", "להוסיף": "#22c55e", "להסיר": "#f59e0b", "לבדוק": "#3b82f6", "כללי": "#a855f7" };
+  var STAGE_COLORS = { "אירוע מחולל": "#ef4444", "אקספוזיציה": "#f59e0b", "נקודת מפנה": "#22c55e", "נקודת מפנה שנייה": "#3b82f6", "נקודת שיא": "#a855f7", "התרה": "#64748b" };
+  function stageColorOf(t) {
+    var st = t.pt || fltStageOf(t);
+    return STAGE_COLORS[st] || "";
+  }
   function fbCatName(t) {
     if (t.cat) return t.cat;
     var m = (t.text || "").match(/\[([^\]]+)\]/);
@@ -654,24 +659,24 @@
       '<div class="chgctl"><div class="chgrow"><span class="chgstat">' + open + ' פתוחים מתוך ' + fbItems.length + '</span></div></div>';
     html += fltBar();
     html += '<div class="fblegend"><span class="lbl">מקרא:</span> ' +
-      [["לשנות", "#ef4444"], ["להוסיף", "#22c55e"], ["להסיר", "#f59e0b"], ["לבדוק", "#3b82f6"], ["כללי", "#a855f7"]].map(function (x) {
+      STAGES.map(function (x) { return [x, STAGE_COLORS[x]]; }).map(function (x) {
         return '<button class="fbleg' + (flt.c === x[1] ? " on" : "") + '" data-c="' + x[1] + '"><i style="background:' + x[1] + '"></i>' + x[0] + '</button>';
       }).join("") + '</div>';
     html += '<datalist id="charlist">' + (charNames || []).map(function (n) { return '<option value="' + esc(n) + '">'; }).join("") + '</datalist>';
     html += '<div class="chglist">' + fbItems.map(function (t, k) {
       if (!fltOk(t, true)) return "";
-      var cols = ["#ef4444", "#f59e0b", "#22c55e", "#3b82f6", "#a855f7"];
-      var curc = t.cu !== undefined ? t.cu : fbCatColor(t);
-      var dots = fbPick === k ? cols.map(function (c) { return '<button class="fbdot' + (curc === c ? " on" : "") + '" data-i="' + k + '" data-c="' + c + '" style="background:' + c + '"></button>'; }).join("") +
+      var cols = STAGES.map(function (x) { return STAGE_COLORS[x]; });
+      var curc = stageColorOf(t);
+      var dots = fbPick === k ? STAGES.map(function (x, xi) { var c = cols[xi]; return '<button class="fbdot' + (curc === c ? " on" : "") + '" data-i="' + k + '" data-s="' + x + '" data-c="' + c + '" style="background:' + c + '" title="' + x + '"></button>'; }).join("") +
         '<button class="fbdot fbdot-none' + (!curc ? " on" : "") + '" data-i="' + k + '" data-c=""></button>' : '';
       var curBtn = '<button class="fbcur" data-i="' + k + '" title="שנה צבע" style="background:' + (curc || "transparent") + '"></button>';
-      var col = t.cu !== undefined ? t.cu : fbCatColor(t);
+      var col = stageColorOf(t);
       return '<div class="todoitem' + (t.done ? " done" : "") + '" data-i="' + k + '"' + (col ? ' style="border-inline-start:6px solid ' + col + '"' : "") + '>' +
         '<button class="todocheck fbcheck" data-i="' + k + '">' + (t.done ? "✓" : "") + '</button>' +
         '<div class="todobody"><textarea class="fbta" data-i="' + k + '" rows="2">' + esc(String(t.text || "").replace(/^\s*\[[^\]]+\]\s*/, "")) + '</textarea>' +
         (fbMeta === k ? '<div class="fbmeta"><input class="fbch" list="charlist" data-i="' + k + '" value="' + esc(t.ch || "") + '" placeholder="דמות, דמות">' +
         '<select class="fbpt" data-i="' + k + '"><option value="">חלק</option>' + STAGES.map(function (x) { return '<option value="' + x + '"' + ((t.pt || fltStageOf(t)) === x ? " selected" : "") + '>' + x + '</option>'; }).join("") + '</select></div>' : '') +
-        '</div><div class="todoacts">' + (t.sn ? '<button class="linkbtn fbscene" data-sn="' + t.sn + '">📍 סצנה ' + t.sn + '</button>' : '') + '<div class="fbcap" data-i="' + k + '">' + esc([(t.ch || "דמות?"), (t.pt || fltStageOf(t) || "חלק?")].join(" · ")) + '</div>' + curBtn + '<div class="fbdots">' + dots + '</div><button class="linkbtn fbdel" data-i="' + k + '">מחק</button></div></div>';
+        '</div><div class="todoacts">' + (t.sn ? '<button class="linkbtn fbscene" data-sn="' + t.sn + '">📍 סצנה ' + t.sn + '</button>' : '') + '' + (fbCatName(t) ? '<span class="fbcat">' + esc(fbCatName(t)) + '</span>' : '') + '<div class="fbcap" data-i="' + k + '">' + esc([(t.ch || "דמות?"), (t.pt || fltStageOf(t) || "חלק?")].join(" · ")) + '</div>' + curBtn + '<div class="fbdots">' + dots + '</div><button class="linkbtn fbdel" data-i="' + k + '">מחק</button></div></div>';
     }).join("") + '</div>';
     if (!fbItems.length) html += '<div class="empty">עוד אין פריטים מהשיחה עם המרצה.</div>';
     list.innerHTML = html;
@@ -1154,7 +1159,7 @@
         var fcur = e.target.closest(".fbcur");
         if (fcur) { var ci2 = +fcur.dataset.i; fbPick = fbPick === ci2 ? -1 : ci2; renderFeedback(fl); return; }
         var fdot = e.target.closest(".fbdot");
-        if (fdot) { var di = +fdot.dataset.i; fbItems[di].cu = fdot.dataset.c || ""; fbPick = -1; saveFeedback(); renderFeedback(fl); return; }
+        if (fdot) { var di = +fdot.dataset.i; fbItems[di].pt = fdot.dataset.s || ""; fbPick = -1; saveFeedback(); renderFeedback(fl); return; }
         var fsc = e.target.closest(".fbscene");
         if (fsc) { W.goToScene(+fsc.dataset.sn - 1).catch(showErr); return; }
         var fdl = e.target.closest(".fbdel");
