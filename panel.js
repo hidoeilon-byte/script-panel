@@ -591,7 +591,7 @@
     window.scrollTo(0, y); list.scrollTop = sy;
   }
   // ---------- filters for the personal and feedback lists (colour, character, part of the structure)
-  var flt = { c: "", ch: "", st: "" }, charNames = null, colOpen = false;
+  var flt = { c: "", ch: "", st: "", cat: "" }, charNames = null, colOpen = false;
   function fltColorOf(t, isFb) {
     if (isFb) return stageColorOf(t);
     return t.c || "";
@@ -602,6 +602,7 @@
   }
   function fltOk(t, isFb) {
     if (flt.c) { var cc = fltColorOf(t, isFb) || "none"; if (cc !== flt.c) return false; }
+    if (flt.cat && isFb && fbCatName(t) !== flt.cat) return false;
     if (flt.ch) { var chOk = (isFb && t.ch) ? t.ch.split(",").map(function (x) { return x.trim(); }).indexOf(flt.ch) >= 0 : (t.text || "").indexOf(flt.ch) >= 0; if (!chOk) return false; }
     if (flt.st) { var ss = (isFb && t.pt) ? stNorm(t.pt) : (fltStageOf(t) || "לא שויך"); if (ss !== flt.st) return false; }
     return true;
@@ -662,8 +663,8 @@
       '<div class="chgctl"><div class="chgrow"><span class="chgstat">' + open + ' פתוחים מתוך ' + fbItems.length + '</span></div></div>';
     html += fltBar();
     html += '<div class="fblegend"><span class="lbl">מקרא:</span> ' +
-      STAGES.map(function (x) { return [x, STAGE_COLORS[x]]; }).map(function (x) {
-        return '<button class="fbleg' + (flt.c === x[1] ? " on" : "") + '" data-c="' + x[1] + '"><i style="background:' + x[1] + '"></i>' + x[0] + '</button>';
+      ["לשנות", "להוסיף", "להסיר", "לבדוק", "כללי"].map(function (c) {
+        return '<button class="fbleg' + (flt.cat === c ? " on" : "") + '" data-cat="' + c + '">' + c + '</button>';
       }).join("") + '</div>';
     html += '<datalist id="charlist">' + (charNames || []).map(function (n) { return '<option value="' + esc(n) + '">'; }).join("") + '</datalist>';
     html += '<div class="chglist">' + fbItems.map(function (t, k) {
@@ -1124,7 +1125,7 @@
       }
       if (e.target.closest("#fltcolbtn")) { colOpen = !colOpen; renderList(); return; }
       var flg = e.target.closest(".fbleg");
-      if (flg) { var lc = flg.dataset.c; flt.c = flt.c === lc ? "" : lc; renderList(); return; }
+      if (flg) { var lc = flg.dataset.cat; flt.cat = flt.cat === lc ? "" : lc; renderList(); return; }
       var fcolB = e.target.closest(".fltcol");
       if (fcolB) { flt.c = fcolB.dataset.c || ""; colOpen = false; renderList(); return; }
       if (view === "feedback" || (view === "todo" && e.target.closest("#colR"))) {
