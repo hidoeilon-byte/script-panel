@@ -588,7 +588,7 @@
     window.scrollTo(0, y); list.scrollTop = sy;
   }
   // ---------- filters for the personal and feedback lists (colour, character, part of the structure)
-  var flt = { c: "", ch: "", st: "" }, charNames = null;
+  var flt = { c: "", ch: "", st: "" }, charNames = null, colOpen = false;
   function fltColorOf(t, isFb) {
     if (isFb) return t.cu !== undefined ? t.cu : fbCatColor(t);
     return t.c || "";
@@ -626,7 +626,7 @@
     var cOpts = [["", "כל הצבעים"], ["none", "בלי צבע"], ["#ef4444", "לשנות"], ["#22c55e", "להוסיף"], ["#f59e0b", "להסיר"], ["#3b82f6", "לבדוק"], ["#a855f7", "כללי"]];
     var stOpts = [""].concat(STAGES, ["לא שויך"]);
     return '<div class="fltbar">' +
-      '<div class="fltcols">' + cOpts.map(function (o) { return '<button class="fltcol' + (flt.c === o[0] ? " on" : "") + '" data-c="' + o[0] + '" title="' + o[1] + '" style="background:' + (o[0] && o[0] !== "none" ? o[0] : "transparent") + '"></button>'; }).join("") + '</div>' +
+      '<div class="fltcols"><button class="fltcolbtn" id="fltcolbtn">צבע ▾</button>' + (colOpen ? cOpts.map(function (o) { return '<button class="fltcol' + (flt.c === o[0] ? " on" : "") + '" data-c="' + o[0] + '" title="' + o[1] + '" style="background:' + (o[0] && o[0] !== "none" ? o[0] : "transparent") + '"></button>'; }).join("") : "") + '</div>' +
       '<select id="fltch"><option value="">כל הדמויות</option>' + (charNames || []).map(function (n) { return '<option value="' + esc(n) + '"' + (flt.ch === n ? " selected" : "") + '>' + esc(n) + '</option>'; }).join("") + '</select>' +
       '<select id="fltst">' + stOpts.map(function (o) { return '<option value="' + esc(o) + '"' + (flt.st === o ? " selected" : "") + '>' + (o || "כל החלקים") + '</option>'; }).join("") + '</select>' +
       '</div>';
@@ -665,8 +665,8 @@
         '<button class="todocheck fbcheck" data-i="' + k + '">' + (t.done ? "✓" : "") + '</button>' +
         '<div class="todobody"><textarea class="fbta" data-i="' + k + '" rows="2">' + esc(t.text) + '</textarea>' +
         (t.sn ? '<button class="linkbtn fbscene" data-sn="' + t.sn + '">📍 סצנה ' + t.sn + '</button>' : '') + '</div>' +
-        '<div class="fbmeta"><select class="fbch" data-i="' + k + '"><option value="">דמות: —</option>' + fbCharOpts(t.ch) + '</select>' +
-        '<select class="fbpt" data-i="' + k + '"><option value="">חלק: —</option>' + STAGES.map(function (x) { return '<option value="' + x + '"' + (t.pt === x ? " selected" : "") + '>' + x + '</option>'; }).join("") + '</select></div>' +
+        '<div class="fbmeta"><select class="fbch" data-i="' + k + '"><option value="">דמות</option>' + fbCharOpts(t.ch) + '</select>' +
+        '<select class="fbpt" data-i="' + k + '"><option value="">חלק</option>' + STAGES.map(function (x) { return '<option value="' + x + '"' + (t.pt === x ? " selected" : "") + '>' + x + '</option>'; }).join("") + '</select></div>' +
         '<div class="todoacts">' + curBtn + '<div class="fbdots">' + dots + '</div><button class="linkbtn fbdel" data-i="' + k + '">מחק</button></div></div>';
     }).join("") + '</div>';
     if (!fbItems.length) html += '<div class="empty">עוד אין פריטים מהשיחה עם המרצה.</div>';
@@ -1109,8 +1109,9 @@
           "\n\nעזור לי לחשוב על זה. אם צריך תיקון בתסריט, כתוב אותו בפורמט ההצעה הרגיל. אל תשנה את המסמך.");
         return;
       }
+      if (e.target.closest("#fltcolbtn")) { colOpen = !colOpen; renderList(); return; }
       var fcolB = e.target.closest(".fltcol");
-      if (fcolB) { flt.c = fcolB.dataset.c || ""; renderList(); return; }
+      if (fcolB) { flt.c = fcolB.dataset.c || ""; colOpen = false; renderList(); return; }
       if (view === "feedback" || (view === "todo" && e.target.closest("#colR"))) {
         var fl = $("colR") || list;
         if (e.target.closest("#fbopen")) {

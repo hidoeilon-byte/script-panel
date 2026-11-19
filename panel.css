@@ -346,3 +346,5 @@ body.compact #bar .cnt { display: none; }
 .todoitem .todobody { flex: 1 1 auto; min-width: 0; }
 .todoitem textarea { width: 100%; min-width: 0; box-sizing: border-box; }
 .fbmeta select { flex: 1 1 110px; }
+.fltcolbtn { font: inherit; font-size: 12px; padding: 2px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); cursor: pointer; }
+.fltcols { flex-wrap: wrap; }
