@@ -1517,7 +1517,7 @@
       if (document.hidden || editing >= 0) return;
       refreshNotes();
       if (view === "changes") { refreshChanges(); return; }
-      if (view === "notes" || view === "compare") return;
+      if (view === "notes" || view === "compare" || view === "feedback" || view === "todo") return;
       refreshScenes();
     }, 3000);
     if (view === "changes") refreshChanges();
