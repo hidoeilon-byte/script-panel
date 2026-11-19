@@ -382,6 +382,7 @@
   var noteSel = "";
   var showDone = false;
   var walkOpen = false;
+  var cmtShow = lsGet("cmtShow", "") === "1";
   var synNoteCount = 0;
   function isSynNote(t) { t = (t || "").trim(); return /^סינופסיס \d+:/.test(t) || /^תסריט:/.test(t); }
   function openNotes() { return notes ? notes.filter(function (n) { return !n.resolved; }).length : 0; }
@@ -415,6 +416,8 @@
     var html = '<div class="chgctl"><div class="chgrow"><span class="chgstat">' +
       (openNotes() ? openNotes() + " הערות פתוחות" : "אין הערות פתוחות") + '</span><span class="sp"></span>' +
       '<label><input type="checkbox" id="notedone"' + (showDone ? " checked" : "") + '> הצג גם שטופלו</label></div>' +
+      '<div class="chgrow"><button class="lb" id="cmtview">' + (cmtShow ? "הסתר הערות במסמך" : "הצג הערות גם במסמך") + '</button>' +
+      '<span class="chgstat">' + (cmtShow ? "ההערות מוצגות גם בשולי המסמך" : "ההערות מוצגות רק כאן") + '</span></div>' +
       (synNoteCount ? '<div class="chgrow"><span class="chgstat">' + synNoteCount + ' הערות עזר להשוואה לא מוצגות כאן (להסרה: כלים ← סיום השוואה)</span></div>' : '') + '</div>';
     var cmpOpen = notes.filter(function (n) { return isCmp(n) && !n.resolved; });
     if (cmpOpen.length) {
@@ -717,6 +720,7 @@
     list.addEventListener("click", function (e) {
       if (view === "notes") {
         if (e.target.id === "notedone") { showDone = e.target.checked; renderList(); return; }
+        if (e.target.closest("#cmtview")) { cmtShow = !cmtShow; lsSet("cmtShow", cmtShow ? "1" : ""); renderList(); W.sendRequest("comments", cmtShow ? "show" : "hide").catch(showErr); return; }
         if (e.target.closest("#walkshow")) { walkOpen = walkOpen === "walk" ? false : "walk"; renderList(); return; }
         if (e.target.closest("#prepshow")) { walkOpen = walkOpen === "prep" ? false : "prep"; renderList(); return; }
         if (e.target.closest("#walkcopy")) { copyFrom("walktext", "walkcopied"); return; }
