@@ -867,6 +867,7 @@
   }
 
   function render() {
+    document.body.classList.toggle("noheader", view === "notes" || view === "compare" || view === "todo" || view === "feedback");
     renderBar();
     renderPlotBar();
     var hideBars = view === "changes" || view === "tools" || view === "compare" || view === "notes" || view === "todo" || view === "feedback";
