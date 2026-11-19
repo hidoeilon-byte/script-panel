@@ -735,8 +735,8 @@
     if (view === "todo") { list.className = "view-notes"; renderTodo(list); return; }
     if (view === "compare") {
       list.className = "view-notes";
-      list.innerHTML = '<div id="cmpT"></div><div id="cmpN"></div>';
-      renderTools($("cmpT"), "השוואה חכמה"); renderNotes($("cmpN")); return;
+      list.innerHTML = '<div id="cmpN"></div><div id="cmpT"></div>';
+      renderNotes($("cmpN")); renderTools($("cmpT"), "השוואה חכמה"); return;
     }
     if (view === "feedback") { list.className = "view-notes"; renderFeedback(list); return; }
     list.className = view === "struct" ? "view-struct" : "";
