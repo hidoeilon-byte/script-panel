@@ -30,7 +30,10 @@
   var curScene = -1;
   var editing = -1;
   var view = "heads";   // heads | struct
-  var lastSub = { script: "heads", notes: "notes", tools: "changes" };   // remembered sub-tab per group
+  var lastSub = { script: "heads", notes: "notes", tools: "changes" };
+  var STAGES = ["אירוע מחולל", "אקספוזיציה", "נקודת מפנה", "נקודת מפנה שנייה", "התרה"];
+  var structMode = "seq";   // seq | stage (inside the מבנה tab)
+  var dragI = -1;   // remembered sub-tab per group
   var showSyn = true;
   var filter = null;    // plot id
   var collapsed = {};   // sequence start index -> true
@@ -59,7 +62,7 @@
       plots: plots,
       marks: marks,
       locs: customLocs,
-      scenes: scenes.map(function (s) { return { h: s.h, s: s.s, q: s.q, p: s.p, m: s.m || "" }; })
+      scenes: scenes.map(function (s) { return { h: s.h, s: s.s, q: s.q, p: s.p, m: s.m || "", st: s.st || "" }; })
     });
   }
 
@@ -95,7 +98,7 @@
         heads.some(function (h, i) { return !old[i] || old[i].h !== h; });
       scenes = heads.map(function (h, i) {
         var o = map[i] >= 0 ? old[map[i]] : null;
-        return { h: h, s: o ? o.s || "" : "", q: o ? o.q || "" : "", p: o ? (o.p || []).slice() : [], m: o ? o.m || "" : "", preview: previews[i] };
+        return { h: h, s: o ? o.s || "" : "", q: o ? o.q || "" : "", p: o ? (o.p || []).slice() : [], m: o ? o.m || "" : "", st: o ? o.st || "" : "", preview: previews[i] };
       });
       if (changed && sig) { editing = -1; persist(); }
       sig = newSig;
@@ -697,6 +700,28 @@
     };
     var html = "";
     if (view === "struct") {
+      html += '<div class="modeseg"><button data-mode="seq" class="' + (structMode === "seq" ? "on" : "") + '">סיקוונסים</button>' +
+        '<button data-mode="stage" class="' + (structMode === "stage" ? "on" : "") + '">חמשת השלבים</button></div>';
+      html += '<details class="sumimp"><summary>תקצירים מ-Claude</summary>' +
+        '<div class="sumbody"><button class="lb on" id="sumcopy">העתק בקשה: תקציר לכל סצנה</button> <span class="chgstat" id="sumcopied"></span>' +
+        '<textarea id="sumpaste" rows="4" placeholder="הדבק כאן את רשימת Claude, שורה לכל סצנה: סצנה 1: ..."></textarea>' +
+        '<button class="lb" id="sumapply">הכנס תקצירים לסצנות שריקות</button> <span class="chgstat" id="sumres"></span></div></details>';
+    }
+    if (view === "struct" && structMode === "stage") {
+      var byStage = {}; STAGES.forEach(function (x) { byStage[x] = []; }); byStage[""] = [];
+      scenes.forEach(function (sc, i) { (byStage[sc.st && STAGES.indexOf(sc.st) >= 0 ? sc.st : ""]).push(i); });
+      STAGES.concat([""]).forEach(function (stg) {
+        html += '<div class="stage" data-stage="' + esc(stg) + '"><div class="stagehead">' + (stg || "לא שויך") + ' <span class="scount">' + byStage[stg].length + '</span></div>' +
+          byStage[stg].map(function (i) {
+            var sc = scenes[i];
+            return '<div class="strow" draggable="true" data-i="' + i + '"><span class="srnum">' + (i + 1) + '</span><span class="srhead">' + esc(sc.h) + '</span>' +
+              (sc.s ? '<div class="srsum">' + esc(sc.s) + '</div>' : '') + '</div>';
+          }).join("") + (byStage[stg].length ? "" : '<div class="stdrop">גרור לכאן סצנה</div>') + '</div>';
+      });
+      list.innerHTML = html;
+      return;
+    }
+    if (view === "struct") {
       var seqs = sequences(), n = 0;
       var hasSeq = seqs.some(function (q) { return q.start >= 0; });
       if (!hasSeq) html += '<div class="hint box">אין עדיין סיקוונסים. פתח סצנה (✎) וסמן "תחילת סיקוונס".</div>';
@@ -880,7 +905,42 @@
     var list = $("scenes");
     list.addEventListener("input", function (e) { if (e.target.id === "todoin") todoDraft = e.target.value; });
     list.addEventListener("keydown", function (e) { if (e.target.id === "todoin" && e.key === "Enter") { todoDraft = e.target.value; todoAdd(); } });
-    list.addEventListener("click", function (e) {
+    list.addEventListener("dragstart", function (e) {
+      var r = e.target.closest && e.target.closest(".strow");
+      if (r) { dragI = +r.dataset.i; try { e.dataTransfer.setData("text/plain", String(dragI)); } catch (x) {} }
+  });
+  list.addEventListener("dragover", function (e) { if (e.target.closest && e.target.closest(".stage")) e.preventDefault(); });
+  list.addEventListener("drop", function (e) {
+      var st = e.target.closest && e.target.closest(".stage");
+      if (!st || dragI < 0) return;
+      e.preventDefault();
+      var stg = st.dataset.stage;
+      if (scenes[dragI]) { scenes[dragI].st = stg; persist(); }
+      dragI = -1; renderList();
+  });
+  list.addEventListener("click", function (e) {
+      var md = e.target.closest("[data-mode]");
+      if (md) { structMode = md.dataset.mode; renderList(); return; }
+      if (e.target.closest("#sumcopy")) {
+        var lines = scenes.map(function (sc, i) { return "סצנה " + (i + 1) + ": " + sc.h; }).join("\n");
+        copyAndFlash(e.target.closest("#sumcopy"), "כתוב לכל סצנה בתסריט משפט אחד בזמן הווה, על מה קורה בה. אל תשנה את המסמך. החזר רק רשימה, שורה לכל סצנה, בפורמט: \"סצנה N: המשפט\"\n\nהסצנות:\n" + lines);
+        return;
+      }
+      if (e.target.closest("#sumapply")) {
+        var raw = ($("sumpaste").value || ""), done = 0, skipped = 0, miss = 0;
+        raw.split("\n").forEach(function (ln) {
+          var m = ln.match(/^\s*(?:סצנה\s*)?(\d+)\s*[:.)\-–]\s*(.+)$/);
+          if (!m) return;
+          var k = +m[1] - 1, txt = m[2].trim();
+          if (!scenes[k]) { miss++; return; }
+          if (scenes[k].s && scenes[k].s.trim()) { skipped++; return; }
+          scenes[k].s = txt; done++;
+        });
+        if (done) persist();
+        $("sumres").textContent = "הוכנסו " + done + (skipped ? ", דולגו " + skipped + " שכבר יש להן תקציר" : "") + (miss ? ", " + miss + " לא נמצאו" : "");
+        renderList();
+        return;
+      }
       var ask = e.target.closest(".askclaude");
       if (ask) {
         var sc = scenes[+ask.dataset.i];
