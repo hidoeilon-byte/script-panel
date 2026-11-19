@@ -361,7 +361,7 @@
     return sg;
   }
   var cardEdit = false, cardMsg = "", hlId = "", cardMode = false, instrOpen = false;
-  var doneNote = null;   // {text, where, snap}: the note just inserted; its change stays green until "הבאה"
+  var doneNote = null;   // {id, text, where, snap, undo}: the note just inserted, waiting for "טופל" or "צריך תיקון"
   function markOff() {
     var g = W.clearCardMarks ? W.clearCardMarks().catch(function () {}) : Promise.resolve();
     if (!hlId || !W.markNote) return g;
@@ -402,10 +402,10 @@
   function sugHtml(sg) {
     if (!sg) return "";
     var h = sg.ops.map(function (o) {
-      if (o.op === "replace") return '<div class="sugl"><span class="sugt">במקום</span><s>' + esc(o.old) + '</s></div><div class="sugl"><span class="sugt">יבוא</span>' + esc(o.neu) + '</div>';
-      if (o.op === "delete") return '<div class="sugl"><span class="sugt">מחק</span><s>' + esc(o.old) + '</s></div>';
-      if (o.op === "delpara") return '<div class="sugl"><span class="sugt">מחק פסקה</span><s>' + esc(o.old) + '</s></div>';
-      return '<div class="sugi">' + (o.after ? 'אחרי: ' + esc(o.after) : 'אחרי הפסקה המסומנת') + '</div>' +
+      if (o.op === "replace") return '<div class="sugl findable" data-find="' + esc(o.old) + '"><span class="sugt">במקום</span><s>' + esc(o.old) + '</s></div><div class="sugl"><span class="sugt">יבוא</span>' + esc(o.neu) + '</div>';
+      if (o.op === "delete") return '<div class="sugl findable" data-find="' + esc(o.old) + '"><span class="sugt">מחק</span><s>' + esc(o.old) + '</s></div>';
+      if (o.op === "delpara") return '<div class="sugl findable" data-find="' + esc(o.old) + '"><span class="sugt">מחק פסקה</span><s>' + esc(o.old) + '</s></div>';
+      return (o.after ? '<div class="sugi findable" data-find="' + esc(o.after) + '">אחרי: ' + esc(o.after) + '</div>' : '<div class="sugi">אחרי הפסקה המסומנת</div>') +
         o.lines.map(function (l) { return '<div class="sugl"><span class="sugt">' + esc(l.style) + '</span>' + esc(l.text) + '</div>'; }).join("");
     }).join('<div class="sugsep"></div>');
     h += sg.info.map(function (l) { return '<div class="sugi">' + esc(l) + '</div>'; }).join("");
@@ -505,8 +505,9 @@
       list.innerHTML = '<div class="card"><div class="cardtop"><button class="lb" id="cardlist">☰ רשימה</button><span class="cardpos">✓ הוכנס</span></div>' +
         '<div class="cardwhere">' + esc(doneNote.where || "") + '</div>' +
         '<div class="cardwhat">' + esc(doneNote.text.replace(/^השוואה:\s*/, "")) + '</div>' +
-        '<div class="sugbox donebox">השינוי מסומן בירוק במסמך. הסימון יורד כשעוברים להערה הבאה.<br>לביטול: Cmd+Z במסמך.</div>' +
-        '<div class="cardact" style="grid-template-columns:1fr"><button class="bigbtn on" id="donenext">הבאה ←</button></div></div>';
+        '<div class="sugbox donebox">השינוי מסומן בירוק במסמך. בדוק אותו: אם הוא טוב, "טופל". אם לא, "צריך תיקון" מחזיר את הטקסט למה שהיה ופותח הוראה ל-Claude.</div>' +
+        (cardMsg ? '<div class="toolnote cardmsg">' + esc(cardMsg) + '</div>' : '') +
+        '<div class="cardact" style="grid-template-columns:1fr 1fr"><button class="bigbtn on" id="doneok">✓ טופל</button><button class="bigbtn" id="donefix">צריך תיקון</button></div></div>';
       return;
     }
     if (cardMode && cmpOpen.length && roundDone) {
@@ -831,7 +832,27 @@
           }).catch(function (er) { cardMsg = "לא נשמר: " + (er && er.message ? er.message : er); renderList(); });
           return;
         }
-        if (e.target.closest("#donenext")) { var sn0 = doneNote ? doneNote.snap : snapOrder(); doneNote = null; markOff().then(function () { advanceAfter(sn0); }); return; }
+        if (e.target.closest("#doneok")) {
+          var dn = doneNote; if (!dn) return;
+          doneNote = null; cardMsg = "";
+          markOff().then(function () { return W.resolveNote(dn.id, true); }).then(refreshNotes).then(function () { advanceAfter(dn.snap); }).catch(showErr);
+          return;
+        }
+        if (e.target.closest("#donefix")) {
+          var df = doneNote; if (!df) return;
+          cardMsg = "מחזיר את הטקסט…"; renderList();
+          W.undoSuggestion(df.undo || []).then(function () { cardMsg = ""; }, function (er) { cardMsg = (er && er.message ? er.message : String(er)); })
+            .then(function () { return markOff(); }).then(function () {
+              doneNote = null; noteSel = df.id; instrOpen = true; renderList();
+              var it2 = $("instrtext"); if (it2) it2.focus();
+            });
+          return;
+        }
+        var fd = e.target.closest(".findable");
+        if (fd) {
+          W.markFind(fd.dataset.find).then(function (found) { if (!found) { cardMsg = "הקטע לא נמצא בתסריט."; renderList(); } }).catch(showErr);
+          return;
+        }
         if (e.target.closest("#cardstart")) {
           cardMode = true; walkOpen = false;
           var co0 = openCmp(), withS = co0.filter(function (n) { return !!sugRaw(n); });
@@ -839,7 +860,7 @@
           selectNote(startId, true); return;
         }
         if (e.target.closest("#cardrestart")) { roundDone = false; var co1 = openCmp(); if (co1.length) selectNote(co1[0].id, true); return; }
-        if (e.target.closest("#cardlist")) { roundDone = false; cardMode = false; cardEdit = false; markOff(); renderList(); return; }
+        if (e.target.closest("#cardlist")) { doneNote = null; roundDone = false; cardMode = false; cardEdit = false; markOff(); renderList(); return; }
         if (e.target.closest("#cmtview")) { cmtShow = !cmtShow; renderList(); W.sendRequest("comments", cmtShow ? "show" : "hide").catch(showErr); return; }
         if (e.target.closest("#walkshow")) { walkOpen = walkOpen === "walk" ? false : "walk"; renderList(); return; }
         if (e.target.closest("#prepshow")) { walkOpen = walkOpen === "prep" ? false : "prep"; renderList(); return; }
@@ -863,9 +884,9 @@
           chk.then(function (m) {
             if (m && m.length) { cardMsg = "מוצגים סימוני שינויים מול דראפט. קודם לחץ \"הסתר\" בלשונית שינויים."; renderList(); return; }
             cardMsg = "מכניס…"; renderList();
-            return markOff().then(function () { return W.applySuggestion(nid, sg2); }).then(function () {
+            return markOff().then(function () { return W.applySuggestion(nid, sg2); }).then(function (undo) {
               cardEdit = false; cardMsg = "";
-              doneNote = { text: cn.text, where: cn.where, snap: snN };
+              doneNote = { id: nid, text: cn.text, where: cn.where, snap: snN, undo: undo };
               return refreshNotes().then(function () { renderList(); });
             }).catch(function (er) { cardMsg = "לא הוכנס: " + (er && er.message ? er.message : er); renderList(); });
           });

@@ -339,6 +339,9 @@
     },
     // sug.ops: [{op:"replace",old,neu} | {op:"delete",old} | {op:"delpara",old} | {op:"add",after,lines:[{style,text}]}]
     // every target is located first; nothing changes unless all of them are found
+    // Applies sug.ops; every target is located first and nothing changes unless all are found.
+    // New text is marked green (bookmarks zCardG*); anchors for undo are bookmarks zCardU*.
+    // Resolves to undo info for undoSuggestion. The comment itself is not resolved here.
     applySuggestion: function (id, sug) {
       return run(function (ctx) {
         var cs = ctx.document.body.getComments();
@@ -357,53 +360,129 @@
             return f;
           });
           return ctx.sync().then(function () {
+            var used = [];
             var hits = sug.ops.map(function (o, k) {
               var f = finds[k];
               if (!f) return null;
               var h = (f.sp && f.sp.items[0]) || f.para.items[0] || f.body.items[0];
               if (!h) throw new Error("לא נמצא בתסריט: \"" + (o.op === "add" ? o.after : o.old).slice(0, 40) + "\"");
+              used[k] = (f.sp && f.sp.items[0]) ? o.old + " " : o.old;
               return h;
             });
-            var basePara = c.getRange().paragraphs.getLast();
-            var changed = [];
-            sug.ops.forEach(function (o, k) {
-              var h = hits[k];
-              if (o.op === "replace") changed.push(h.insertText(o.neu, "Replace"));
-              else if (o.op === "delete") h.insertText("", "Replace");
-              else if (o.op === "delpara") h.paragraphs.getFirst().delete();
-              else {
-                var base = h ? h.paragraphs.getLast() : basePara;
-                o.lines.forEach(function (ln) {
-                  base = base.insertParagraph(ln.text, "After");
-                  base.style = ln.style;
-                  base.font.highlightColor = null;
-                  changed.push(base.getRange("Content"));
-                });
-              }
+            // paragraphs about to be deleted: remember text, style and a neighbour to put them back
+            var dp = sug.ops.map(function (o, k) {
+              if (o.op !== "delpara") return null;
+              var p = hits[k].paragraphs.getFirst();
+              p.load("text,style");
+              var prev = p.getPreviousOrNullObject(); prev.load("isNullObject");
+              var next = p.getNextOrNullObject(); next.load("isNullObject");
+              return { p: p, prev: prev, next: next };
             });
-            c.resolved = true;
-            var stamp = String(Date.now()).slice(-7);
-            changed.forEach(function (r, k) {
-              r.font.highlightColor = "#00FF00";
-              try { r.insertBookmark("zCardG" + stamp + "_" + k); } catch (e) {}
+            return ctx.sync().then(function () {
+              var basePara = c.getRange().paragraphs.getLast();
+              var stamp = String(Date.now()).slice(-7);
+              var undo = [], green = [], n = 0;
+              function bm(r, kind) { var nm = "zCard" + kind + stamp + "_" + (n++); r.insertBookmark(nm); return nm; }
+              sug.ops.forEach(function (o, k) {
+                var h = hits[k];
+                if (o.op === "replace") {
+                  var r = h.insertText(o.neu, "Replace");
+                  r.font.highlightColor = "#00FF00";
+                  green.push(r);
+                  undo.push({ op: "replace", bm: bm(r, "G"), old: used[k] });
+                } else if (o.op === "delete") {
+                  var z = h.insertText("", "Replace");
+                  var nm = null;
+                  try { nm = bm(z, "U"); } catch (e) {}
+                  undo.push({ op: "delete", bm: nm, text: used[k] });
+                } else if (o.op === "delpara") {
+                  var d = dp[k], where = !d.prev.isNullObject ? "after" : "before";
+                  var nb = where === "after" ? d.prev : d.next;
+                  undo.push({ op: "delpara", bm: bm(nb.getRange("Content"), "U"), where: where, text: d.p.text, style: d.p.style });
+                  d.p.delete();
+                } else {
+                  var base = h ? h.paragraphs.getLast() : basePara, names = [];
+                  o.lines.forEach(function (ln) {
+                    base = base.insertParagraph(ln.text, "After");
+                    base.style = ln.style;
+                    var rc = base.getRange("Content");
+                    rc.font.highlightColor = "#00FF00";
+                    green.push(rc);
+                    names.push(bm(rc, "G"));
+                  });
+                  undo.push({ op: "add", bms: names });
+                }
+              });
+              if (green.length) green[0].select("Select"); else basePara.select("Start");
+              return ctx.sync().then(function () { return undo; });
             });
-            if (changed.length) changed[0].select("Select"); else basePara.select("Start");
-            return ctx.sync();
           });
         });
       });
     },
 
-    // remove the green marks the card left on its last change (bookmarks zCardG*)
+    // Puts the text back the way it was before applySuggestion, using its undo info (last change first).
+    undoSuggestion: function (undo) {
+      return run(function (ctx) {
+        var rs = {};
+        undo.forEach(function (u) {
+          (u.bms || (u.bm ? [u.bm] : [])).forEach(function (nm) { rs[nm] = ctx.document.getBookmarkRangeOrNullObject(nm); rs[nm].load("isNullObject"); });
+        });
+        return ctx.sync().then(function () {
+          var missing = 0;
+          function ok(nm) { if (!nm || !rs[nm] || rs[nm].isNullObject) { missing++; return null; } return rs[nm]; }
+          undo.slice().reverse().forEach(function (u) {
+            var r;
+            if (u.op === "replace") { if ((r = ok(u.bm))) { r = r.insertText(u.old, "Replace"); r.font.highlightColor = null; } }
+            else if (u.op === "delete") { if ((r = ok(u.bm))) r.insertText(u.text, "Start"); }
+            else if (u.op === "delpara") {
+              if ((r = ok(u.bm))) {
+                var np = r.paragraphs.getFirst().insertParagraph(u.text, u.where === "after" ? "After" : "Before");
+                np.style = u.style;
+              }
+            } else (u.bms || []).forEach(function (nm) { if ((r = ok(nm))) r.paragraphs.getFirst().delete(); });
+          });
+          return ctx.sync().then(function () { if (missing) throw new Error("חלק מהשינוי לא נמצא, בדוק את הטקסט (אפשר גם Cmd+Z)"); });
+        });
+      });
+    },
+
+    // Jump to a passage quoted in a suggestion and mark it turquoise (bookmark zCardT*), replacing the previous one.
+    markFind: function (text) {
+      return run(function (ctx) {
+        var names = ctx.document.body.getRange("Whole").getBookmarks(true, true);
+        var hits = ctx.document.body.search(text.slice(0, 250), { matchCase: true });
+        hits.load("items");
+        return ctx.sync().then(function () {
+          names.value.filter(function (nm) { return /^zCardT/.test(nm); }).forEach(function (nm) {
+            ctx.document.getBookmarkRangeOrNullObject(nm).font.highlightColor = null;
+            ctx.document.deleteBookmark(nm);
+          });
+          var h = hits.items[0];
+          if (!h) return false;
+          h.font.load("highlightColor");
+          return ctx.sync().then(function () {
+            var hc = h.font.highlightColor;
+            if (hc === null || hc === "" || hc === undefined) {
+              h.font.highlightColor = "Turquoise";
+              h.insertBookmark("zCardT" + String(Date.now()).slice(-7));
+            }
+            h.select("Select");
+            return ctx.sync().then(function () { return true; });
+          });
+        });
+      });
+    },
+
+    // remove what the card left behind: green / turquoise marks and undo anchors (bookmarks zCard*)
     clearCardMarks: function () {
       if (!Office.context.requirements.isSetSupported("WordApi", "1.4")) return Promise.resolve();
       return run(function (ctx) {
         var names = ctx.document.body.getRange("Whole").getBookmarks(true, true);
         return ctx.sync().then(function () {
-          names.value.filter(function (n) { return /^zCardG/.test(n); }).forEach(function (n) {
-            var r = ctx.document.getBookmarkRangeOrNullObject(n);
-            r.font.highlightColor = null;
-            ctx.document.deleteBookmark(n);
+          names.value.filter(function (nm) { return /^zCard/.test(nm); }).forEach(function (nm) {
+            if (/^zCard[GT]/.test(nm)) ctx.document.getBookmarkRangeOrNullObject(nm).font.highlightColor = null;
+            ctx.document.deleteBookmark(nm);
           });
           return ctx.sync();
         });
