@@ -266,6 +266,71 @@
       });
     },
 
+    // --- review card: yellow mark on the note being worked on, and inserting a prepared suggestion
+    markNote: function (id, on) {
+      var self = window.WordBridge;
+      self._hl = self._hl || {};
+      return run(function (ctx) {
+        var cs = ctx.document.body.getComments();
+        cs.load("items/id");
+        return ctx.sync().then(function () {
+          var c = cs.items.filter(function (x) { return x.id === id; })[0];
+          if (!c) return;
+          var r = c.getRange();
+          if (on) {
+            r.font.load("highlightColor");
+            return ctx.sync().then(function () {
+              var h = r.font.highlightColor;
+              if (h === null || h === "" || h === undefined) {   // only mark text that has no highlight of its own
+                r.font.highlightColor = "Yellow"; self._hl[id] = true;
+              }
+              r.select("Select");
+              return ctx.sync();
+            });
+          }
+          if (self._hl[id]) { r.font.highlightColor = null; delete self._hl[id]; }
+          return ctx.sync();
+        });
+      });
+    },
+    // sug: {kind:"add", after:"", lines:[{style,text}]} | {kind:"replace", old:"", neu:""}
+    applySuggestion: function (id, sug) {
+      return run(function (ctx) {
+        var cs = ctx.document.body.getComments();
+        cs.load("items/id");
+        return ctx.sync().then(function () {
+          var c = cs.items.filter(function (x) { return x.id === id; })[0];
+          if (!c) throw new Error("ההערה לא נמצאה במסמך");
+          var para = c.getRange().paragraphs.getLast();
+          if (sug.kind === "replace") {
+            if (!sug.old || sug.old.length > 250) throw new Error("הקטע להחלפה חסר או ארוך מדי");
+            var inPara = c.getRange().paragraphs.getFirst().search(sug.old, { matchCase: true });
+            var inBody = ctx.document.body.search(sug.old, { matchCase: true });
+            inPara.load("items"); inBody.load("items");
+            return ctx.sync().then(function () {
+              var hit = inPara.items[0] || inBody.items[0];
+              if (!hit) throw new Error("הקטע \"" + sug.old.slice(0, 40) + "…\" לא נמצא בתסריט");
+              hit.insertText(sug.neu, "Replace");
+              c.resolved = true;
+              return ctx.sync();
+            });
+          }
+          var findAfter = sug.after ? ctx.document.body.search(sug.after.slice(0, 250), { matchCase: true }) : null;
+          if (findAfter) findAfter.load("items");
+          return ctx.sync().then(function () {
+            var base = findAfter && findAfter.items[0] ? findAfter.items[0].paragraphs.getLast() : para;
+            sug.lines.forEach(function (ln) {
+              base = base.insertParagraph(ln.text, "After");
+              base.style = ln.style;
+              base.font.highlightColor = null;
+            });
+            c.resolved = true;
+            return ctx.sync();
+          });
+        });
+      });
+    },
+
     gotoMark: function (name) {
       return run(function (ctx) {
         var r = ctx.document.getBookmarkRangeOrNullObject(name);

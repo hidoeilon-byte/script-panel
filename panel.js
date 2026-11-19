@@ -306,6 +306,7 @@
   var PROMPTS = {
     s2t: "השוואה חכמה, סינופסיס ← תסריט, במצב חסכוני: קרא כל סצנה ואת הערת העזר שלה פעם אחת בלבד, אל תכתוב ניתוח בצ'אט תוך כדי, וכל הערה עד שתי שורות. על כל כותרת סצנה בתסריט יש הערה שמתחילה ב\"סינופסיס\" ובה מה שהסינופסיס אומר על הסצנה. עבור סצנה אחרי סצנה, קרא את כל הטקסט של הסצנה ואת הערת הסינופסיס שלה, ומצא כל פעולה, פרט או רגע שכתובים בסינופסיס וחסרים בתסריט או קורים בו אחרת. על כל הבדל הוסף הערת Word (Comment) חדשה שמתחילה במילה \"השוואה:\": אם ההבדל קשור למשפט מסוים בתסריט, עגן את ההערה על המשפט הזה; אם משהו חסר לגמרי, עגן אותה על כותרת הסצנה. בהערה: מה כתוב בסינופסיס, ומה יש (או אין) בתסריט, בקצרה. אל תשנה טקסט בתסריט ואל תמחק הערות. אחרי כל הסצנות בדוק גם סתירות בין סצנות באותו מסמך (חפץ שעובר מקום, גיל, שם), וכל סתירה היא הערה שמתחילה ב\"השוואה: רצף:\". בסוף כתוב לי בצ'אט רק כמה הבדלים מצאת ובאילו סצנות, שורה לכל סצנה.",
     t2s: "השוואה חכמה, תסריט ← סינופסיס, במצב חסכוני: קרא כל סצנה ואת הערת העזר שלה פעם אחת בלבד, אל תכתוב ניתוח בצ'אט תוך כדי, וכל הערה עד שתי שורות. על כל כותרת סצנה בסינופסיס יש הערה שמתחילה ב\"תסריט:\" ובה הטקסט של הסצנה מהתסריט. עבור סצנה אחרי סצנה, השווה את הפסקאות של הסינופסיס להערת התסריט, ומצא כל פעולה או רגע משמעותי שקורה בתסריט וחסר בסינופסיס או מתואר בו אחרת. לא פרטים קטנים כמו משפטי דיאלוג או תפאורה. על כל הבדל הוסף הערת Word (Comment) חדשה שמתחילה במילה \"השוואה:\": עגן אותה על המשפט בסינופסיס שמתאר את הרגע, או על כותרת הסצנה אם הרגע חסר לגמרי. בהערה: מה קורה בתסריט, ומה כתוב (או לא כתוב) בסינופסיס, בקצרה. אל תשנה טקסט ואל תמחק הערות. אחרי כל הסצנות בדוק גם סתירות בין סצנות באותו מסמך (חפץ שעובר מקום, גיל, שם), וכל סתירה היא הערה שמתחילה ב\"השוואה: רצף:\". בסוף כתוב לי בצ'אט רק כמה הבדלים מצאת ובאילו סצנות, שורה לכל סצנה.",
+    prep: "הכנת הצעות לכרטיס התיקונים. עבור פעם אחת על כל הערות ה-Word שמתחילות ב\"השוואה:\" ולא סומנו כטופלו. בתחילת העבודה קרא פעם אחת את כל התסריט, כדי לשמור על רצף בין הסצנות. לכל הערה הוסף תשובה (Reply) להערה עצמה, בפורמט המדויק הזה בלבד, בלי שום טקסט נוסף: שורה ראשונה \"הצעה: הוספה\" או \"הצעה: החלפה\" או \"הצעה: אין\". בהוספה: שורה לכל פסקה חדשה, שמתחילה בשם הסגנון בסוגריים מרובעים, [תיאור] או [דמות] או [דיאלוג] או [הערת בימוי], ואחריו הטקסט. הפסקאות נכנסות אחרי הפסקה שההערה מעוגנת אליה. אם הן צריכות להיכנס אחרי פסקה אחרת, הוסף שורה \"אחרי: \" ובה קטע מדויק מהפסקה ההיא, עד 100 תווים. בהחלפה: שורה \"במקום: \" ובה הקטע המדויק מהתסריט, מילה במילה ועד 100 תווים, ושורה \"יבוא: \" ובה הטקסט החדש. \"הצעה: אין\" כשההבדל דורש החלטה שלי ולא תיקון, ובשורה הבאה הסבר קצר. אם התיקון סותר משהו בסצנה אחרת, הוסף שורה \"רצף: \" עם הסצנה ומה צריך לתקן שם. תיאור בזמן הווה, קצר וויזואלי; דיאלוג קצר ומדובר, בקול של הדמויות. אל תשנה טקסט בתסריט, אל תסמן הערות כטופלו ואל תמחק הערות. בסוף כתוב בצ'אט רק כמה הצעות הוספת.",
     walk: "מעבר על ההשוואות. עבור איתי על הערות ה-Word שמתחילות ב\"השוואה:\" ועוד לא סומנו כטופלו, אחת אחת, לפי הסדר במסמך. הערה אחת בכל פעם. לכל הערה: 1. בחר במסמך את הטקסט שההערה מעוגנת אליו, כדי שאקפוץ אליו, וסמן אותו במרקר צהוב. 2. קרא רק את הסצנה של ההערה, לא את כל המסמך, וכתוב \"הערה N מתוך M\", את כותרת הסצנה ואת תוכן ההערה. 3. הצע ניסוח קצר לתוספת או לשינוי בתסריט, בפורמט הקרן ובסגנונות של התבנית, ואמור איפה בדיוק הוא נכנס. לפני ההצעה חפש במסמך (חיפוש, לא קריאה מלאה) את מילות המפתח שלה: חפצים, דמויות, מקומות. אם יש סתירה עם סצנה אחרת, כתוב אותה והצע גם שם תיקון. 4. שאל אותי: להכניס כמו שהצעת, לשנות (ואני אגיד מה), לדלג, או לסמן טופל בלי שינוי. אל תשנה טקסט לפני שעניתי. 5. לפני שעוברים להערה הבאה, תמיד הורד את המרקר הצהוב. 6. אחרי שינוי, או כשאמרתי טופל, סמן את ההערה כטופלה (Resolved). אם אי אפשר, הוסף להערה תשובה (Reply) שמתחילה במילה \"טופל\". בדילוג אל תסמן. אל תמחק הערות ואל תשנה טקסט אחר. אם מוצגים סימוני שינויים מול דראפט (מרקר צהוב או טקסט אפור מחוק), בקש ממני קודם ללחוץ \"הסתר\" בלשונית שינויים."
   };
   function isCmp(n) { return /^השוואה:/.test(n.text || ""); }
@@ -315,6 +316,65 @@
     ta.focus(); ta.select();
     try { if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(ta.value).then(done, function () { document.execCommand("copy"); done(); }); return; } } catch (er) {}
     try { document.execCommand("copy"); done(); } catch (er2) { $(msgId).textContent = "סמן את הטקסט והעתק ידנית (Cmd+C)"; }
+  }
+
+  var STYLES_OK = ["תיאור", "דמות", "דיאלוג", "הערת בימוי", "כותרת סצנה"];
+  function sugRaw(n) {
+    var r = (n.replies || []).filter(function (x) { return /^הצעה:/.test(x); });
+    return r.length ? r[r.length - 1] : "";
+  }
+  function parseSug(raw) {
+    if (!raw) return null;
+    var ls = raw.replace(/[\r\u000b\u2028]/g, "\n").replace(/\s*(\[(?:תיאור|דמות|דיאלוג|הערת בימוי|כותרת סצנה)\]|במקום:|יבוא:|רצף:|אחרי:)/g, "\n$1").split("\n").map(function (l) { return l.trim(); }).filter(Boolean);
+    var head = (ls.shift() || "").replace(/^הצעה:\s*/, "");
+    var sg = { kind: /החלפה/.test(head) ? "replace" : /אין/.test(head) ? "none" : "add", after: "", old: "", neu: "", lines: [], warn: [], info: [] };
+    ls.forEach(function (l) {
+      var m = l.match(/^\[([^\]]+)\]\s*(.*)$/);
+      if (m && STYLES_OK.indexOf(m[1].trim()) >= 0) sg.lines.push({ style: m[1].trim(), text: m[2] });
+      else if (/^אחרי:/.test(l)) sg.after = l.replace(/^אחרי:\s*/, "");
+      else if (/^במקום:/.test(l)) sg.old = l.replace(/^במקום:\s*/, "");
+      else if (/^יבוא:/.test(l)) sg.neu = l.replace(/^יבוא:\s*/, "");
+      else if (/^רצף:/.test(l)) sg.warn.push(l.replace(/^רצף:\s*/, ""));
+      else sg.info.push(l);
+    });
+    sg.ok = sg.kind === "add" ? sg.lines.length > 0 : sg.kind === "replace" ? !!(sg.old && sg.neu) : false;
+    return sg;
+  }
+  var cardEdit = false, cardMsg = "", hlId = "";
+  function markOff() {
+    if (!hlId || !W.markNote) return Promise.resolve();
+    var id = hlId; hlId = "";
+    return W.markNote(id, false).catch(function () {});
+  }
+  function selectNote(id, isCompare) {
+    cardEdit = false; cardMsg = "";
+    return markOff().then(function () {
+      noteSel = id;
+      renderList();
+      var se = document.querySelector('.noteitem.sel');
+      if (se && se.scrollIntoView) se.scrollIntoView({ block: "nearest" });
+      if (isCompare && W.markNote) { hlId = id; return W.markNote(id, true); }
+      return W.gotoNote(id);
+    }).catch(showErr);
+  }
+  function openCmp() { return (notes || []).filter(function (n) { return isCmp(n) && !n.resolved; }); }
+  function stepCmp(dir) {
+    var co = openCmp();
+    if (!co.length) { markOff(); noteSel = ""; renderList(); return; }
+    var ix = co.map(function (n) { return n.id; }).indexOf(noteSel);
+    if (dir > 0) ix = ix < 0 ? 0 : (ix + 1) % co.length;
+    else ix = ix < 0 ? co.length - 1 : (ix - 1 + co.length) % co.length;
+    selectNote(co[ix].id, true);
+  }
+  function sugHtml(sg) {
+    if (!sg) return "";
+    var h = "";
+    if (sg.kind === "add") h += sg.lines.map(function (l) { return '<div class="sugl"><span class="sugt">' + esc(l.style) + '</span>' + esc(l.text) + '</div>'; }).join("") +
+      (sg.after ? '<div class="sugi">נכנס אחרי: ' + esc(sg.after) + '</div>' : '<div class="sugi">נכנס אחרי הפסקה המסומנת</div>');
+    if (sg.kind === "replace") h += '<div class="sugl"><span class="sugt">במקום</span><s>' + esc(sg.old) + '</s></div><div class="sugl"><span class="sugt">יבוא</span>' + esc(sg.neu) + '</div>';
+    h += sg.info.map(function (l) { return '<div class="sugi">' + esc(l) + '</div>'; }).join("");
+    h += sg.warn.map(function (l) { return '<div class="sugw">⚠ רצף: ' + esc(l) + '</div>'; }).join("");
+    return h;
   }
 
   // ---------- notes: Word comments, with the sync notes first-class
@@ -343,11 +403,10 @@
         if (!x.resolved && (x.replies || []).some(function (r) { return /^✓?\s*טופל/.test(r); })) {
           x.resolved = true; W.resolveNote(x.id, true).catch(function () {});
         }
-        delete x.replies;
       });
       var changed = JSON.stringify(n) !== JSON.stringify(notes);
       notes = n;
-      if (changed) { renderBar(); if (view === "notes") renderList(); }
+      if (changed) { renderBar(); if (view === "notes" && !cardEdit) renderList(); }
     }).catch(function () {});
   }
   function renderNotes(list) {
@@ -360,15 +419,36 @@
     var cmpOpen = notes.filter(function (n) { return isCmp(n) && !n.resolved; });
     if (cmpOpen.length) {
       var pos = cmpOpen.map(function (n) { return n.id; }).indexOf(noteSel);
-      html += '<div class="walkbox"><div class="toolh">מעבר על ההשוואות (' + cmpOpen.length + ' פתוחות)</div>' +
+      var cur = pos >= 0 ? cmpOpen[pos] : null;
+      var raw = cur ? sugRaw(cur) : "", sg = parseSug(raw);
+      var withSug = cmpOpen.filter(function (n) { return !!sugRaw(n); }).length;
+      html += '<div class="walkbox"><div class="toolh">כרטיס תיקונים (' + cmpOpen.length + ' פתוחות' + (withSug ? ', ' + withSug + ' עם הצעה' : '') + ')</div>' +
         '<div class="chgrow"><button class="lb" id="cmpprev">⇤ הקודמת</button>' +
-        '<span class="chgstat">' + (pos >= 0 ? "השוואה " + (pos + 1) + " מתוך " + cmpOpen.length : "עוד לא נבחרה השוואה") + '</span>' +
-        '<button class="lb" id="cmpnext">הבאה ⇥</button></div>' +
+        '<span class="chgstat">' + (cur ? "השוואה " + (pos + 1) + " מתוך " + cmpOpen.length : "לחץ \"הבאה\" כדי להתחיל") + '</span>' +
+        '<button class="lb" id="cmpnext">הבאה ⇥</button></div>';
+      if (cur) {
+        html += '<div class="cardnote"><span class="nw">' + esc(cur.where || "") + '</span>' + esc(cur.text.replace(/^השוואה:\s*/, "")) + '</div>';
+        if (raw) {
+          html += '<div class="sugbox"><div class="toolh">ההצעה של Claude' + (sg.kind === "none" ? " (דורש החלטה שלך)" : "") + '</div>' +
+            (cardEdit ? '<textarea id="cardtext" rows="6">' + esc(raw) + '</textarea><div class="toolnote">שמור על הפורמט: [תיאור] / [דמות] / [דיאלוג] בתחילת כל שורה, או במקום: / יבוא:</div>' : sugHtml(sg)) + '</div>';
+        } else {
+          html += '<div class="toolnote">אין עדיין הצעה להערה הזו. לחץ "הכן הצעות עם Claude" למטה.</div>';
+        }
+        html += '<div class="chgrow cardbtns">' +
+          (raw && (sg.ok || cardEdit) ? '<button class="lb on" id="cardins">' + (cardEdit ? "הכנס את הגרסה הערוכה" : "הכנס") + '</button>' : '') +
+          (raw && !cardEdit ? '<button class="lb" id="cardedit">ערוך</button>' : '') +
+          (cardEdit ? '<button class="lb" id="cardcancel">בטל עריכה</button>' : '') +
+          '<button class="lb" id="cardskip">דלג</button>' +
+          '<button class="lb" id="cardok">✓ טופל בלי שינוי</button></div>' +
+          (cardMsg ? '<div class="toolnote cardmsg">' + esc(cardMsg) + '</div>' : '');
+      }
+      html += '<div class="chgrow"><button class="lb' + (withSug ? '' : ' on') + '" id="prepshow">הכן הצעות עם Claude</button>' +
+        '<button class="lb" id="walkshow">מעבר בצ\'אט</button></div>' +
         (walkOpen ?
-          '<div class="promptbox"><textarea id="walktext" readonly rows="5">' + esc(PROMPTS.walk) + '</textarea>' +
+          '<div class="promptbox"><textarea id="walktext" readonly rows="5">' + esc(PROMPTS[walkOpen]) + '</textarea>' +
           '<button class="lb on" id="walkcopy">העתק</button> <span class="chgstat" id="walkcopied"></span>' +
-          '<div class="toolnote">מדביקים ל-Claude ב-Word. הוא מציג הערה אחת, מציע מה להוסיף לתסריט ושואל לפני כל שינוי.</div><div class="toolnote">לחיסכון: לפני שמדביקים, בחר Sonnet בתפריט המודל של Claude. Opus יקר יותר ולא נחוץ כאן.</div></div>' :
-          '<button class="lb on" id="walkshow">עבור על ההשוואות עם Claude</button>') + '</div>';
+          '<div class="toolnote">' + (walkOpen === "prep" ? 'מדביקים ל-Claude ב-Word. הוא מוסיף לכל הערה תשובה עם הצעה, ואז עוברים כאן בכרטיס.' : 'מדביקים ל-Claude ב-Word. הוא מציג הערה אחת, מציע ושואל לפני כל שינוי.') + '</div>' +
+          '<div class="toolnote">לחיסכון: לפני שמדביקים, בחר Sonnet בתפריט המודל של Claude.</div></div>' : '') + '</div>';
     }
     if (!shown.length) {
       html += '<div class="empty">' + (notes.length ? "כל ההערות טופלו." : "אין הערות במסמך.") +
@@ -551,6 +631,7 @@
     $("bar").addEventListener("click", function (e) {
       var v = e.target.closest("[data-view]");
       if (v) {
+        if (view === "notes" && v.dataset.view !== "notes") { markOff(); cardEdit = false; }
         view = v.dataset.view; lsSet("view", view); editing = -1; render();
         if (view === "changes") { refreshChanges().then(function () { if (!chg || !chg.last) W.sendRequest && W.sendRequest("info", ""); }); }
         if (view === "notes") { refreshNotes(); }
@@ -636,20 +717,33 @@
     list.addEventListener("click", function (e) {
       if (view === "notes") {
         if (e.target.id === "notedone") { showDone = e.target.checked; renderList(); return; }
-        if (e.target.closest("#walkshow")) { walkOpen = true; renderList(); return; }
+        if (e.target.closest("#walkshow")) { walkOpen = walkOpen === "walk" ? false : "walk"; renderList(); return; }
+        if (e.target.closest("#prepshow")) { walkOpen = walkOpen === "prep" ? false : "prep"; renderList(); return; }
         if (e.target.closest("#walkcopy")) { copyFrom("walktext", "walkcopied"); return; }
-        var stepBtn = e.target.closest("#cmpnext, #cmpprev");
-        if (stepBtn) {
-          var co = (notes || []).filter(function (n) { return isCmp(n) && !n.resolved; });
-          if (!co.length) return;
-          var ix = co.map(function (n) { return n.id; }).indexOf(noteSel);
-          if (stepBtn.id === "cmpnext") ix = ix < 0 ? 0 : (ix + 1) % co.length;
-          else ix = ix < 0 ? co.length - 1 : (ix - 1 + co.length) % co.length;
-          noteSel = co[ix].id;
-          renderList();
-          var se = document.querySelector('.noteitem.sel');
-          if (se && se.scrollIntoView) se.scrollIntoView({ block: "nearest" });
-          W.gotoNote(noteSel).catch(showErr);
+        if (e.target.closest("#cmpnext")) { stepCmp(1); return; }
+        if (e.target.closest("#cmpprev")) { stepCmp(-1); return; }
+        if (e.target.closest("#cardskip")) { stepCmp(1); return; }
+        if (e.target.closest("#cardedit")) { cardEdit = true; cardMsg = ""; renderList(); var ct = $("cardtext"); if (ct) ct.focus(); return; }
+        if (e.target.closest("#cardcancel")) { cardEdit = false; renderList(); return; }
+        if (e.target.closest("#cardok")) {
+          var idk = noteSel;
+          markOff().then(function () { return W.resolveNote(idk, true); }).then(refreshNotes).then(function () { stepCmp(1); }).catch(showErr);
+          return;
+        }
+        if (e.target.closest("#cardins")) {
+          var nid = noteSel, cn = (notes || []).filter(function (x) { return x.id === nid; })[0];
+          if (!cn) return;
+          var sg2 = parseSug(cardEdit && $("cardtext") ? $("cardtext").value : sugRaw(cn));
+          if (!sg2 || !sg2.ok) { cardMsg = "ההצעה לא בפורמט שאפשר להכניס. ערוך אותה או דלג."; renderList(); return; }
+          var chk = W.listChangeMarks ? W.listChangeMarks() : Promise.resolve(null);
+          chk.then(function (m) {
+            if (m && m.length) { cardMsg = "מוצגים סימוני שינויים מול דראפט. קודם לחץ \"הסתר\" בלשונית שינויים."; renderList(); return; }
+            cardMsg = "מכניס…"; renderList();
+            return markOff().then(function () { return W.applySuggestion(nid, sg2); }).then(function () {
+              cardEdit = false; cardMsg = "";
+              return refreshNotes().then(function () { stepCmp(1); });
+            }).catch(function (er) { cardMsg = "לא הוכנס: " + (er && er.message ? er.message : er); renderList(); });
+          });
           return;
         }
         var ok = e.target.closest(".noteok");
@@ -660,9 +754,8 @@
         }
         var ng = e.target.closest(".notego");
         if (ng) {
-          noteSel = ng.dataset.id;
-          renderList();
-          W.gotoNote(ng.dataset.id).catch(showErr);
+          var gn = (notes || []).filter(function (x) { return x.id === ng.dataset.id; })[0];
+          selectNote(ng.dataset.id, !!(gn && isCmp(gn) && !gn.resolved));
         }
         return;
       }
