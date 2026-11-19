@@ -589,11 +589,14 @@
       '<button class="lb on" id="fbpasteok">הוסף לרשימה</button> <span class="chgstat" id="fbres"></span></div></details>' +
       '<div class="chgctl"><div class="chgrow"><span class="chgstat">' + open + ' פתוחים מתוך ' + fbItems.length + '</span></div></div>';
     html += '<div class="chglist">' + fbItems.map(function (t, k) {
-      return '<div class="todoitem' + (t.done ? " done" : "") + '" data-i="' + k + '">' +
+      var cols = ["#ef4444", "#f59e0b", "#22c55e", "#3b82f6", "#a855f7"];
+      var dots = cols.map(function (c) { return '<button class="fbdot' + (t.c === c ? " on" : "") + '" data-i="' + k + '" data-c="' + c + '" style="background:' + c + '"></button>'; }).join("") +
+        '<button class="fbdot fbdot-none' + (!t.c ? " on" : "") + '" data-i="' + k + '" data-c=""></button>';
+      return '<div class="todoitem' + (t.done ? " done" : "") + '" data-i="' + k + '"' + (t.c ? ' style="border-inline-start:6px solid ' + t.c + '"' : "") + '>' +
         '<button class="todocheck fbcheck" data-i="' + k + '">' + (t.done ? "✓" : "") + '</button>' +
         '<div class="todobody"><div class="todotext">' + esc(t.text) + '</div>' +
         (t.sn ? '<button class="linkbtn fbscene" data-sn="' + t.sn + '">📍 סצנה ' + t.sn + '</button>' : '') + '</div>' +
-        '<div class="todoacts"><button class="linkbtn fbdel" data-i="' + k + '">מחק</button></div></div>';
+        '<div class="todoacts"><div class="fbdots">' + dots + '</div><button class="linkbtn fbdel" data-i="' + k + '">מחק</button></div></div>';
     }).join("") + '</div>';
     if (!fbItems.length) html += '<div class="empty">עוד אין פריטים מהשיחה עם המרצה.</div>';
     list.innerHTML = html;
@@ -1030,6 +1033,8 @@
         }
         var fc = e.target.closest(".fbcheck");
         if (fc) { var fi = +fc.dataset.i; fbItems[fi].done = !fbItems[fi].done; saveFeedback(); renderFeedback(list); return; }
+        var fdot = e.target.closest(".fbdot");
+        if (fdot) { var di = +fdot.dataset.i; fbItems[di].c = fdot.dataset.c || ""; saveFeedback(); renderFeedback(list); return; }
         var fsc = e.target.closest(".fbscene");
         if (fsc) { W.goToScene(+fsc.dataset.sn - 1).catch(showErr); return; }
         var fdl = e.target.closest(".fbdel");

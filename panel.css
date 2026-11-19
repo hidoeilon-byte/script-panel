@@ -318,3 +318,7 @@ body.compact #bar .cnt { display: none; }
 .sredit { font-size: 11.5px; margin-inline-start: auto; }
 .srta { width: 100%; box-sizing: border-box; font: inherit; font-size: 12px; line-height: 1.4; border: 1px solid var(--accent); border-radius: 5px; background: var(--bg); color: var(--ink); padding: 4px; margin-top: 3px; }
 .srempty { font-style: italic; }
+.fbdots { display: flex; gap: 3px; align-items: center; }
+.fbdot { width: 14px; height: 14px; border-radius: 50%; border: 1px solid var(--line); cursor: pointer; padding: 0; }
+.fbdot.on { outline: 2px solid var(--ink); outline-offset: 1px; }
+.fbdot-none { background: var(--bg); }
