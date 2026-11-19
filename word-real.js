@@ -234,31 +234,43 @@
           });
           var self = window.WordBridge;
           var sig = cs.items.map(function (c) { return c.id; }).join(",");
-          var cmp = null;
-          if (!self._ord || self._ord.sig !== sig) {
-            var rg = cs.items.map(function (c) { return c.getRange(); });
-            cmp = [];
-            for (var i = 0; i < rg.length; i++) for (var j = i + 1; j < rg.length; j++) cmp.push([i, j, rg[i].compareLocationWith(rg[j])]);
+          if ((!self._ord || self._ord.sig !== sig) && self._ordBusy !== sig && self._ordFail !== sig) {   // computed apart, so a failure there never hides the notes
+            self._ordBusy = sig;
+            self.orderNotes(sig).catch(function () { self._ordFail = sig; }).then(function () { self._ordBusy = ""; });
           }
           return ctx.sync().then(function () {
-            if (cmp) {
-              var before = cs.items.map(function () { return 0; });   // how many comments come before each one
-              cmp.forEach(function (x) {
-                var v = x[2].value;
-                if (v === "After" || v === "AdjacentAfter") before[x[0]]++; else before[x[1]]++;
-              });
-              var idx = cs.items.map(function (c, k) { return k; }).sort(function (a, b) { return before[a] - before[b] || a - b; });
-              self._ord = { sig: sig, ids: idx.map(function (k) { return cs.items[k].id; }) };
-            }
             var out = cs.items.map(function (c, i) {
               var rr = reps[i] && reps[i].items ? reps[i].items.map(function (x) { return (x.content || "").trim(); }) : [];
               return { id: c.id, text: (c.content || "").trim(), resolved: !!c.resolved, author: c.authorName || "",
                        replies: rr,
                        where: (paras[i].text || "").trim().slice(0, 90), style: paras[i].style || "" };
             });
+            if (!self._ord || self._ord.sig !== sig) return out;
             var pos = {};
             self._ord.ids.forEach(function (id, k) { pos[id] = k; });
             return out.sort(function (a, b) { return pos[a.id] - pos[b.id]; });
+          });
+        });
+      });
+    },
+    // comment order by place in the document (pairwise compare, one sync), cached by the set of comment ids
+    orderNotes: function (sig) {
+      var self = window.WordBridge;
+      return run(function (ctx) {
+        var cs = ctx.document.body.getComments();
+        cs.load("items/id");
+        return ctx.sync().then(function () {
+          var rg = cs.items.map(function (c) { return c.getRange(); });
+          var cmp = [];
+          for (var i = 0; i < rg.length; i++) for (var j = i + 1; j < rg.length; j++) cmp.push([i, j, rg[i].compareLocationWith(rg[j])]);
+          return ctx.sync().then(function () {
+            var before = cs.items.map(function () { return 0; });
+            cmp.forEach(function (x) {
+              var v = x[2].value;
+              if (v === "After" || v === "AdjacentAfter") before[x[0]]++; else before[x[1]]++;
+            });
+            var idx = cs.items.map(function (c, k) { return k; }).sort(function (a, b) { return before[a] - before[b] || a - b; });
+            self._ord = { sig: cs.items.map(function (c) { return c.id; }).join(","), ids: idx.map(function (k) { return cs.items[k].id; }) };
           });
         });
       });
