@@ -662,8 +662,9 @@
       '<div class="chgctl"><div class="chgrow"><span class="chgstat">' + open + ' פתוחים מתוך ' + fbItems.length + '</span></div></div>';
     html += fltBar();
     html += '<div class="fblegend"><span class="lbl">מקרא:</span> ' +
-      ["לשנות", "להוסיף", "להסיר", "לבדוק", "כללי"].map(function (c) {
-        return '<button class="fbleg' + (flt.cat === c ? " on" : "") + '" data-cat="' + c + '">' + c + '</button>';
+      STAGES.map(function (x) {
+        var c = STAGE_COLORS[x];
+        return '<button class="fbleg' + (flt.c === c ? " on" : "") + '" data-c="' + c + '"><i style="background:' + c + '"></i>' + x + '</button>';
       }).join("") + '</div>';
     html += '<datalist id="charlist">' + (charNames || []).map(function (n) { return '<option value="' + esc(n) + '">'; }).join("") + '</datalist>';
     html += '<div class="chglist">' + fbItems.map(function (t, k) {
@@ -1128,7 +1129,7 @@
       }
       if (e.target.closest("#fltcolbtn")) { colOpen = !colOpen; renderList(); return; }
       var flg = e.target.closest(".fbleg");
-      if (flg) { var lc = flg.dataset.cat; flt.cat = flt.cat === lc ? "" : lc; renderList(); return; }
+      if (flg) { var lc = flg.dataset.c; flt.c = flt.c === lc ? "" : lc; renderList(); return; }
       var fcolB = e.target.closest(".fltcol");
       if (fcolB) { flt.c = fcolB.dataset.c || ""; colOpen = false; renderList(); return; }
       if (view === "feedback" || (view === "todo" && e.target.closest("#colR"))) {
