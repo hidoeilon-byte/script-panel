@@ -593,8 +593,7 @@
   // ---------- filters for the personal and feedback lists (colour, character, part of the structure)
   var flt = { c: "", ch: "", st: "", cat: "" }, charNames = null, colOpen = false;
   function fltColorOf(t, isFb) {
-    if (isFb) return stageColorOf(t);
-    return t.c || "";
+    return stageColorOf(t);
   }
   function fltStageOf(t) {
     var sc = t.sn ? scenes[t.sn - 1] : (t.scene ? scenes.filter(function (x) { return x.h === t.scene; })[0] : null);
@@ -603,8 +602,8 @@
   function fltOk(t, isFb) {
     if (flt.c) { var cc = fltColorOf(t, isFb) || "none"; if (cc !== flt.c) return false; }
     if (flt.cat && isFb && fbCatName(t) !== flt.cat) return false;
-    if (flt.ch) { var chOk = (isFb && t.ch) ? t.ch.split(",").map(function (x) { return x.trim(); }).indexOf(flt.ch) >= 0 : (t.text || "").indexOf(flt.ch) >= 0; if (!chOk) return false; }
-    if (flt.st) { var ss = (isFb && t.pt) ? stNorm(t.pt) : (fltStageOf(t) || "לא שויך"); if (ss !== flt.st) return false; }
+    if (flt.ch) { var chOk = t.ch ? t.ch.split(",").map(function (x) { return x.trim(); }).indexOf(flt.ch) >= 0 : (t.text || "").indexOf(flt.ch) >= 0; if (!chOk) return false; }
+    if (flt.st) { var ss = t.pt ? stNorm(t.pt) : (fltStageOf(t) || "לא שויך"); if (ss !== flt.st) return false; }
     return true;
   }
   function loadCharNames() {
@@ -636,7 +635,7 @@
   }
 
   // ---------- משוב: a list from a conversation with the lecturer (own tab, own storage)
-  var fbItems = null, fbPaste = "", fbPick = -1, fbEdit = -1, todoPick = -1, fbMeta = -1;
+  var fbItems = null, fbPaste = "", fbPick = -1, fbEdit = -1, todoPick = -1, fbMeta = -1, todoMeta = -1;
   // colour per category Claude writes in brackets: set from the start, the user can still change it per item
   var FB_CAT_COLORS = { "לשנות": "#ef4444", "להוסיף": "#22c55e", "להסיר": "#f59e0b", "לבדוק": "#3b82f6", "כללי": "#a855f7" };
   var STAGE_COLORS = { "מחולל": "#ef4444", "אקפוזיציה": "#f59e0b", "מפנה 1": "#22c55e", "מפנה 2": "#3b82f6", "שיא": "#a855f7", "התרה": "#64748b" };
@@ -699,13 +698,15 @@
     html = fltBar() + html;
     html += '<div class="chglist">' + todos.map(function (t, k) {
       if (!fltOk(t, false)) return "";
-      return '<div class="todoitem' + (t.done ? " done" : "") + '" data-i="' + k + '"' + (t.c ? ' style="border-inline-start:6px solid ' + t.c + '"' : "") + '>' +
+      return '<div class="todoitem' + (t.done ? " done" : "") + '" data-i="' + k + '"' + (stageColorOf(t) ? ' style="border-inline-start:6px solid ' + stageColorOf(t) + '"' : "") + '>' +
         '<button class="todocheck" data-i="' + k + '">' + (t.done ? "✓" : "") + '</button>' +
         '<div class="todobody"><textarea class="ptta" data-i="' + k + '" rows="2">' + esc(t.text) + '</textarea>' +
         (t.scene ? '<button class="linkbtn todoscene" data-i="' + k + '">📍 ' + esc(t.scene) + '</button>' : '') +
         (todoLinking === String(k) ? '<div class="todolink">בחר כותרת סצנה בתסריט, ואז לחץ "קשר כאן"<br><button class="lb on" id="todolinkok" data-i="' + k + '">קשר לסצנה הנוכחית</button></div>' : '') +
-        '</div><div class="todoacts"><button class="fbcur todocur" data-i="' + k + '" title="שנה צבע" style="background:' + (t.c || "transparent") + '"></button>' +
-        (todoPick === k ? '<div class="fbdots">' + [["#ef4444"], ["#f59e0b"], ["#22c55e"], ["#3b82f6"], ["#a855f7"]].map(function (c) { return '<button class="fbdot todocol' + (t.c === c[0] ? " on" : "") + '" data-i="' + k + '" data-c="' + c[0] + '" style="background:' + c[0] + '"></button>'; }).join("") + '<button class="fbdot fbdot-none todocol' + (!t.c ? " on" : "") + '" data-i="' + k + '" data-c=""></button></div>' : '') +
+        (todoMeta === k ? '<div class="fbmeta"><input class="todoch" data-i="' + k + '" value="' + esc(t.ch || "") + '" placeholder="דמות, דמות" list="charlist"><select class="todopt" data-i="' + k + '"><option value="">חלק</option>' + STAGES.map(function (x) { return '<option value="' + x + '"' + (stNorm(t.pt) === x ? " selected" : "") + '>' + x + '</option>'; }).join("") + '</select></div>' : '') +
+        '</div><div class="todoacts"><button class="fbcur todocur" data-i="' + k + '" title="שנה חלק" style="background:' + (stageColorOf(t) || "transparent") + '"></button>' +
+        '<span class="fbcap todocap" data-i="' + k + '">' + esc([(t.ch || "דמות?"), (stNorm(t.pt) || "חלק?")].join(" · ")) + '</span>' +
+        (todoPick === k ? '<div class="fbdots">' + STAGES.map(function (x) { var c = STAGE_COLORS[x]; return '<button class="fbdot todocol' + (stageColorOf(t) === c ? " on" : "") + '" data-i="' + k + '" data-s="' + x + '" title="' + x + '" style="background:' + c + '"></button>'; }).join("") + '</div>' : '') +
         '<button class="linkbtn askclaude-todo" data-i="' + k + '">שלח ל-Claude</button><button class="linkbtn todolinkbtn" data-i="' + k + '">קשר</button>' +
         '<button class="linkbtn tododel" data-i="' + k + '">מחק</button></div></div>';
     }).join("") + '</div>';
@@ -1055,6 +1056,8 @@
         if (todos && todos[pi] && pv && pv !== todos[pi].text) { todos[pi].text = pv; saveTodos(); }
         return;
       }
+      if (tc.contains("todoch")) { todos[+e.target.dataset.i].ch = e.target.value.split(",").map(function (x) { return x.trim(); }).filter(Boolean).join(", "); saveTodos(); return; }
+      if (tc.contains("todopt")) { todos[+e.target.dataset.i].pt = e.target.value; saveTodos(); return; }
       if (tc.contains("fbch")) { fbItems[+e.target.dataset.i].ch = e.target.value.split(",").map(function (x) { return x.trim(); }).filter(Boolean).join(", "); saveFeedback(); return; }
       if (tc.contains("fbpt")) { fbItems[+e.target.dataset.i].pt = e.target.value; saveFeedback(); return; }
       if (!tc.contains("fbta")) return;
@@ -1177,7 +1180,9 @@
         var tcur = e.target.closest(".todocur");
         if (tcur) { var tci = +tcur.dataset.i; todoPick = todoPick === tci ? -1 : tci; renderTodo(list); return; }
         var tcol = e.target.closest(".todocol");
-        if (tcol) { var tcn = +tcol.dataset.i; todos[tcn].c = tcol.dataset.c || ""; todoPick = -1; saveTodos(); renderTodo(list); return; }
+        if (tcol) { var tcn = +tcol.dataset.i; todos[tcn].pt = tcol.dataset.s || ""; todoPick = -1; saveTodos(); renderTodo(list); return; }
+        var tcap = e.target.closest(".todocap");
+        if (tcap) { var tcp = +tcap.dataset.i; todoMeta = todoMeta === tcp ? -1 : tcp; renderTodo(list); return; }
         var tk = e.target.closest(".todocheck");
         if (tk) { var ti = +tk.dataset.i; todos[ti].done = !todos[ti].done; saveTodos(); renderList(); return; }
         var td = e.target.closest(".tododel");
