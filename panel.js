@@ -30,7 +30,7 @@
   var curScene = -1;
   var editing = -1;
   var view = "heads";   // heads | struct
-  var lastSub = { script: "heads", notes: "notes", tools: "changes" };
+  var lastSub = { script: "struct", notes: "notes", comparisons: "changes", tools: "tools" };
   var STAGES = ["אירוע מחולל", "אקספוזיציה", "נקודת מפנה", "נקודת מפנה שנייה", "נקודת שיא", "התרה"];
   var stageOpen = {};   // which parts of the structure are open (click the part header)
   var dragI = -1, sumEdit = -1;   // scene whose summary is being edited inside the parts   // remembered sub-tab per group
@@ -49,7 +49,8 @@
   function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
 
   showSyn = lsGet("showSyn", "1") !== "0";
-  view = lsGet("view", "heads");
+  view = lsGet("view", "struct");
+  if (view === "heads" || view === "feedback") view = "struct";
   lastSub[groupOf(view)] = view;
   if (lsGet("compact", "") === "1") document.body.classList.add("compact");
 
@@ -159,11 +160,15 @@
 
   // three groups; each group has two sub-tabs
   var GROUPS = [
-    { g: "script", t: "תסריט", subs: [["heads", "כותרות"], ["struct", "מבנה"]] },
-    { g: "notes", t: "הערות", subs: [["notes", "הערות"], ["todo", "שלי"], ["feedback", "משוב"]] },
-    { g: "tools", t: "כלים", subs: [["changes", "שינויים"], ["tools", "כלים"]] }
+    { g: "script", t: "תסריט", subs: [["struct", "מבנה"]] },
+    { g: "notes", t: "הערות", subs: [["notes", "הערות"], ["todo", "שלי ומשוב"]] },
+    { g: "comparisons", t: "השוואות", subs: [["changes", "דראפטים"], ["compare", "סינופסיס"]] },
+    { g: "tools", t: "כלים", subs: [["tools", "כלים"]] }
   ];
-  function groupOf(v) { return v === "heads" || v === "struct" ? "script" : v === "notes" || v === "todo" || v === "feedback" ? "notes" : "tools"; }
+  function groupOf(v) {
+    return v === "struct" || v === "heads" ? "script" : v === "notes" || v === "todo" || v === "feedback" ? "notes" :
+      v === "changes" || v === "compare" ? "comparisons" : "tools";
+  }
   function renderBar() {
     var cur = groupOf(view), gb = GROUPS.filter(function (x) { return x.g === cur; })[0];
     $("bar").innerHTML =
@@ -656,8 +661,8 @@
     todoDraft = ""; saveTodos(); renderList();
   }
 
-  function renderTools(list) {
-    list.innerHTML = TOOLS.map(function (g) {
+  function renderTools(list, only) {
+    list.innerHTML = TOOLS.filter(function (g) { return !only || g.h.indexOf(only) === 0; }).map(function (g) {
       return '<div class="toolgrp"><div class="toolh">' + esc(g.h) + '</div>' + g.items.map(function (it) {
         return '<button class="toolbtn' + (toolPending === it.cmd ? " busy" : "") + '" data-cmd="' + it.cmd + '"><b>' + esc(it.t) + '</b><span>' +
           esc(toolPending === it.cmd ? "נשלח… (עד 2 שניות)" : it.d) + '</span></button>';
@@ -726,7 +731,12 @@
     if (view === "changes") { list.className = "view-changes"; renderChanges(list); return; }
     if (view === "tools") { list.className = "view-tools"; renderTools(list); return; }
     if (view === "notes") { list.className = "view-notes"; renderNotes(list); return; }
-    if (view === "todo") { list.className = "view-notes"; renderTodo(list); return; }
+    if (view === "todo") {
+      list.className = "view-notes";
+      list.innerHTML = '<div class="twocols"><div id="colL"></div><div id="colR"></div></div>';
+      renderTodo($("colL")); renderFeedback($("colR")); return;
+    }
+    if (view === "compare") { list.className = "view-tools"; renderTools(list, "השוואה חכמה"); return; }
     if (view === "feedback") { list.className = "view-notes"; renderFeedback(list); return; }
     list.className = view === "struct" ? "view-struct" : "";
     if (!scenes.length) {
@@ -796,7 +806,7 @@
   function render() {
     renderBar();
     renderPlotBar();
-    var hideBars = view === "changes" || view === "tools" || view === "notes" || view === "todo";
+    var hideBars = view === "changes" || view === "tools" || view === "compare" || view === "notes" || view === "todo";
     $("markbar").hidden = hideBars;
     if (hideBars) $("plotbar").hidden = true;
     renderList();
@@ -1024,7 +1034,8 @@
           "\n\nעזור לי לחשוב על זה. אם צריך תיקון בתסריט, כתוב אותו בפורמט ההצעה הרגיל. אל תשנה את המסמך.");
         return;
       }
-      if (view === "feedback") {
+      if (view === "feedback" || (view === "todo" && e.target.closest("#colR"))) {
+        var fl = $("colR") || list;
         if (e.target.closest("#fbopen")) {
           W.sendRequest("copyfb", "").then(function () { $("fbopened").textContent = "הסיכום הועתק. הדבק אותו בצ'אט של Claude עם הבקשה"; }).catch(showErr);
           return;
@@ -1042,22 +1053,22 @@
           fbPaste = "";
           if (fn) saveFeedback();
           $("fbres").textContent = fn ? "נוספו " + fn + " פריטים" : "אין מה להוסיף";
-          if (fn) renderFeedback(list);
+          if (fn) renderFeedback(fl);
           return;
         }
         var fc = e.target.closest(".fbcheck");
-        if (fc) { var fi = +fc.dataset.i; fbItems[fi].done = !fbItems[fi].done; saveFeedback(); renderFeedback(list); return; }
+        if (fc) { var fi = +fc.dataset.i; fbItems[fi].done = !fbItems[fi].done; saveFeedback(); renderFeedback(fl); return; }
         var fcur = e.target.closest(".fbcur");
-        if (fcur) { var ci2 = +fcur.dataset.i; fbPick = fbPick === ci2 ? -1 : ci2; renderFeedback(list); return; }
+        if (fcur) { var ci2 = +fcur.dataset.i; fbPick = fbPick === ci2 ? -1 : ci2; renderFeedback(fl); return; }
         var fdot = e.target.closest(".fbdot");
-        if (fdot) { var di = +fdot.dataset.i; fbItems[di].cu = fdot.dataset.c || ""; fbPick = -1; saveFeedback(); renderFeedback(list); return; }
+        if (fdot) { var di = +fdot.dataset.i; fbItems[di].cu = fdot.dataset.c || ""; fbPick = -1; saveFeedback(); renderFeedback(fl); return; }
         var fsc = e.target.closest(".fbscene");
         if (fsc) { W.goToScene(+fsc.dataset.sn - 1).catch(showErr); return; }
         var fdl = e.target.closest(".fbdel");
-        if (fdl) { fbItems.splice(+fdl.dataset.i, 1); saveFeedback(); renderFeedback(list); return; }
+        if (fdl) { fbItems.splice(+fdl.dataset.i, 1); saveFeedback(); renderFeedback(fl); return; }
         return;
       }
-      if (view === "todo") {
+      if (view === "todo" && !e.target.closest("#colR")) {
         if (e.target.closest("#todoadd")) { todoDraft = $("todoin").value; todoAdd(); return; }
         var tk = e.target.closest(".todocheck");
         if (tk) { var ti = +tk.dataset.i; todos[ti].done = !todos[ti].done; saveTodos(); renderList(); return; }
@@ -1193,7 +1204,7 @@
         }
         return;
       }
-      if (view === "tools") {
+      if (view === "tools" || view === "compare") {
         if (e.target.closest("#smartcopy")) { copyFrom("smarttext", "smartcopied"); return; }
         var tb = e.target.closest(".toolbtn");
         if (tb) {
@@ -1202,7 +1213,7 @@
           else if (tb.dataset.cmd === "smartclear") smartPrompt = "";
           toolPending = tb.dataset.cmd; renderList();
           W.sendRequest(tb.dataset.cmd, "").catch(showErr);
-          setTimeout(function () { toolPending = ""; if (view === "tools") renderList(); }, 2500);
+          setTimeout(function () { toolPending = ""; if (view === "tools" || view === "compare") renderList(); }, 2500);
         }
         return;
       }

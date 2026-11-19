@@ -327,3 +327,6 @@ body.compact #bar .cnt { display: none; }
 .fbleg { display: inline-flex; align-items: center; gap: 4px; }
 .fbleg i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
 .fbcur { width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--line); cursor: pointer; padding: 0; }
+.twocols { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: start; }
+.twocols > div { min-width: 0; }
+.twocols .sumimp summary { font-weight: 600; }
