@@ -340,7 +340,7 @@
     sg.ok = sg.kind === "add" ? sg.lines.length > 0 : sg.kind === "replace" ? !!(sg.old && sg.neu) : false;
     return sg;
   }
-  var cardEdit = false, cardMsg = "", hlId = "";
+  var cardEdit = false, cardMsg = "", hlId = "", cardMode = false;
   function markOff() {
     if (!hlId || !W.markNote) return Promise.resolve();
     var id = hlId; hlId = "";
@@ -410,48 +410,63 @@
       if (changed) { renderBar(); if (view === "notes" && !cardEdit) renderList(); }
     }).catch(function () {});
   }
+  function promptBox() {
+    if (!walkOpen) return "";
+    return '<div class="promptbox"><textarea id="walktext" readonly rows="5">' + esc(PROMPTS[walkOpen]) + '</textarea>' +
+      '<button class="lb on" id="walkcopy">העתק</button> <span class="chgstat" id="walkcopied"></span>' +
+      '<div class="toolnote">' + (walkOpen === "prep" ? 'מדביקים ל-Claude ב-Word. הוא מוסיף לכל הערה תשובה עם הצעה, ואז עוברים כאן בכרטיס.' : 'מדביקים ל-Claude ב-Word. הוא מציג הערה אחת, מציע ושואל לפני כל שינוי.') + '</div>' +
+      '<div class="toolnote">לחיסכון: לפני שמדביקים, בחר Sonnet בתפריט המודל של Claude.</div></div>';
+  }
+  function renderCard(list, cmpOpen) {
+    var pos = cmpOpen.map(function (n) { return n.id; }).indexOf(noteSel);
+    if (pos < 0) pos = 0;
+    var cur = cmpOpen[pos];
+    var raw = sugRaw(cur), sg = parseSug(raw);
+    var pct = Math.round(100 * pos / cmpOpen.length);
+    var html = '<div class="card">' +
+      '<div class="cardtop"><button class="lb" id="cardlist">☰ רשימה</button>' +
+      '<span class="cardpos">השוואה ' + (pos + 1) + ' מתוך ' + cmpOpen.length + '</span>' +
+      '<span class="cardnav"><button class="lb" id="cmpprev" title="הקודמת">→</button><button class="lb" id="cmpnext" title="הבאה">←</button></span></div>' +
+      '<div class="cardbar"><span style="width:' + pct + '%"></span></div>' +
+      '<div class="cardwhere">' + esc(cur.where || "") + '</div>' +
+      '<div class="cardwhat">' + esc(cur.text.replace(/^השוואה:\s*/, "")) + '</div>';
+    if (raw) {
+      html += '<div class="sugbox"><div class="sughead">' + (sg.kind === "none" ? "Claude: צריך החלטה שלך" : "ההצעה של Claude") +
+        (cardEdit ? '' : ' <button class="linkbtn" id="cardedit">ערוך</button>') + '</div>' +
+        (cardEdit ? '<textarea id="cardtext" rows="6">' + esc(raw) + '</textarea><div class="toolnote">שמור על הפורמט: [תיאור] / [דמות] / [דיאלוג] בתחילת כל שורה, או במקום: / יבוא:</div>' +
+          '<button class="linkbtn" id="cardcancel">בטל עריכה</button>' : sugHtml(sg)) + '</div>';
+    } else {
+      html += '<div class="sugbox empty2">אין עדיין הצעה להערה הזו.<br><button class="linkbtn" id="prepshow">הכן הצעות עם Claude</button></div>';
+    }
+    if (cardMsg) html += '<div class="toolnote cardmsg">' + esc(cardMsg) + '</div>';
+    var canIns = raw && (sg.ok || cardEdit);
+    html += '<div class="cardact">' +
+      '<button class="bigbtn on" id="cardins"' + (canIns ? '' : ' disabled') + '>' + (cardEdit ? "הכנס ערוך" : "הכנס") + '</button>' +
+      '<button class="bigbtn" id="cardskip">דלג</button>' +
+      '<button class="bigbtn" id="cardok">✓ טופל</button></div>' +
+      '<div class="cardfoot"><button class="linkbtn" id="prepshow">הכן הצעות עם Claude</button> · <button class="linkbtn" id="walkshow">מעבר בצ\'אט</button></div>' +
+      promptBox() + '</div>';
+    var sy = list.scrollTop;
+    list.innerHTML = html;
+    list.scrollTop = sy;
+  }
   function renderNotes(list) {
     if (!notes) { list.innerHTML = '<div class="empty">טוען הערות…</div>'; return; }
+    var cmpOpen = notes.filter(function (n) { return isCmp(n) && !n.resolved; });
+    if (cardMode && cmpOpen.length) { renderCard(list, cmpOpen); return; }
+    if (!cmpOpen.length) cardMode = false;
     var shown = notes.filter(function (n) { return showDone || !n.resolved; });
     var html = '<div class="chgctl"><div class="chgrow"><span class="chgstat">' +
       (openNotes() ? openNotes() + " הערות פתוחות" : "אין הערות פתוחות") + '</span><span class="sp"></span>' +
       '<label><input type="checkbox" id="notedone"' + (showDone ? " checked" : "") + '> הצג גם שטופלו</label></div>' +
-      '<div class="chgrow"><button class="lb" id="cmtview">' + (cmtShow ? "הסתר הערות במסמך" : "הצג הערות גם במסמך") + '</button>' +
-      '<span class="chgstat">' + (cmtShow ? "ההערות מוצגות גם בשולי המסמך" : "ההערות מוצגות רק כאן") + '</span></div>' +
-      (synNoteCount ? '<div class="chgrow"><span class="chgstat">' + synNoteCount + ' הערות עזר להשוואה לא מוצגות כאן (להסרה: כלים ← סיום השוואה)</span></div>' : '') + '</div>';
-    var cmpOpen = notes.filter(function (n) { return isCmp(n) && !n.resolved; });
+      '<div class="chgrow"><button class="lb" id="cmtview">' + (cmtShow ? "הסתר הערות במסמך" : "הצג הערות גם במסמך") + '</button></div>' +
+      (synNoteCount ? '<div class="chgrow"><span class="chgstat">' + synNoteCount + ' הערות עזר מוסתרות (להסרה: כלים ← סיום השוואה)</span></div>' : '') + '</div>';
     if (cmpOpen.length) {
-      var pos = cmpOpen.map(function (n) { return n.id; }).indexOf(noteSel);
-      var cur = pos >= 0 ? cmpOpen[pos] : null;
-      var raw = cur ? sugRaw(cur) : "", sg = parseSug(raw);
       var withSug = cmpOpen.filter(function (n) { return !!sugRaw(n); }).length;
-      html += '<div class="walkbox"><div class="toolh">כרטיס תיקונים (' + cmpOpen.length + ' פתוחות' + (withSug ? ', ' + withSug + ' עם הצעה' : '') + ')</div>' +
-        '<div class="chgrow"><button class="lb" id="cmpprev">⇤ הקודמת</button>' +
-        '<span class="chgstat">' + (cur ? "השוואה " + (pos + 1) + " מתוך " + cmpOpen.length : "לחץ \"הבאה\" כדי להתחיל") + '</span>' +
-        '<button class="lb" id="cmpnext">הבאה ⇥</button></div>';
-      if (cur) {
-        html += '<div class="cardnote"><span class="nw">' + esc(cur.where || "") + '</span>' + esc(cur.text.replace(/^השוואה:\s*/, "")) + '</div>';
-        if (raw) {
-          html += '<div class="sugbox"><div class="toolh">ההצעה של Claude' + (sg.kind === "none" ? " (דורש החלטה שלך)" : "") + '</div>' +
-            (cardEdit ? '<textarea id="cardtext" rows="6">' + esc(raw) + '</textarea><div class="toolnote">שמור על הפורמט: [תיאור] / [דמות] / [דיאלוג] בתחילת כל שורה, או במקום: / יבוא:</div>' : sugHtml(sg)) + '</div>';
-        } else {
-          html += '<div class="toolnote">אין עדיין הצעה להערה הזו. לחץ "הכן הצעות עם Claude" למטה.</div>';
-        }
-        html += '<div class="chgrow cardbtns">' +
-          (raw && (sg.ok || cardEdit) ? '<button class="lb on" id="cardins">' + (cardEdit ? "הכנס את הגרסה הערוכה" : "הכנס") + '</button>' : '') +
-          (raw && !cardEdit ? '<button class="lb" id="cardedit">ערוך</button>' : '') +
-          (cardEdit ? '<button class="lb" id="cardcancel">בטל עריכה</button>' : '') +
-          '<button class="lb" id="cardskip">דלג</button>' +
-          '<button class="lb" id="cardok">✓ טופל בלי שינוי</button></div>' +
-          (cardMsg ? '<div class="toolnote cardmsg">' + esc(cardMsg) + '</div>' : '');
-      }
-      html += '<div class="chgrow"><button class="lb' + (withSug ? '' : ' on') + '" id="prepshow">הכן הצעות עם Claude</button>' +
-        '<button class="lb" id="walkshow">מעבר בצ\'אט</button></div>' +
-        (walkOpen ?
-          '<div class="promptbox"><textarea id="walktext" readonly rows="5">' + esc(PROMPTS[walkOpen]) + '</textarea>' +
-          '<button class="lb on" id="walkcopy">העתק</button> <span class="chgstat" id="walkcopied"></span>' +
-          '<div class="toolnote">' + (walkOpen === "prep" ? 'מדביקים ל-Claude ב-Word. הוא מוסיף לכל הערה תשובה עם הצעה, ואז עוברים כאן בכרטיס.' : 'מדביקים ל-Claude ב-Word. הוא מציג הערה אחת, מציע ושואל לפני כל שינוי.') + '</div>' +
-          '<div class="toolnote">לחיסכון: לפני שמדביקים, בחר Sonnet בתפריט המודל של Claude.</div></div>' : '') + '</div>';
+      html += '<div class="startbox"><button class="bigbtn on" id="cardstart">▶ עבור על ההשוואות</button>' +
+        '<span class="chgstat">' + cmpOpen.length + ' פתוחות' + (withSug ? ', ' + withSug + ' עם הצעה מוכנה' : ', עוד בלי הצעות') + '</span>' +
+        '<div class="cardfoot"><button class="linkbtn" id="prepshow">הכן הצעות עם Claude</button> · <button class="linkbtn" id="walkshow">מעבר בצ\'אט</button></div>' +
+        promptBox() + '</div>';
     }
     if (!shown.length) {
       html += '<div class="empty">' + (notes.length ? "כל ההערות טופלו." : "אין הערות במסמך.") +
@@ -634,7 +649,7 @@
     $("bar").addEventListener("click", function (e) {
       var v = e.target.closest("[data-view]");
       if (v) {
-        if (view === "notes" && v.dataset.view !== "notes") { markOff(); cardEdit = false; }
+        if (view === "notes" && v.dataset.view !== "notes") { markOff(); cardEdit = false; cardMode = false; }
         view = v.dataset.view; lsSet("view", view); editing = -1; render();
         if (view === "changes") { refreshChanges().then(function () { if (!chg || !chg.last) W.sendRequest && W.sendRequest("info", ""); }); }
         if (view === "notes") { refreshNotes(); }
@@ -720,6 +735,13 @@
     list.addEventListener("click", function (e) {
       if (view === "notes") {
         if (e.target.id === "notedone") { showDone = e.target.checked; renderList(); return; }
+        if (e.target.closest("#cardstart")) {
+          cardMode = true; walkOpen = false;
+          var co0 = openCmp(), withS = co0.filter(function (n) { return !!sugRaw(n); });
+          var startId = co0.map(function (n) { return n.id; }).indexOf(noteSel) >= 0 ? noteSel : (withS[0] || co0[0]).id;
+          selectNote(startId, true); return;
+        }
+        if (e.target.closest("#cardlist")) { cardMode = false; cardEdit = false; markOff(); renderList(); return; }
         if (e.target.closest("#cmtview")) { cmtShow = !cmtShow; lsSet("cmtShow", cmtShow ? "1" : ""); renderList(); W.sendRequest("comments", cmtShow ? "show" : "hide").catch(showErr); return; }
         if (e.target.closest("#walkshow")) { walkOpen = walkOpen === "walk" ? false : "walk"; renderList(); return; }
         if (e.target.closest("#prepshow")) { walkOpen = walkOpen === "prep" ? false : "prep"; renderList(); return; }
@@ -759,7 +781,9 @@
         var ng = e.target.closest(".notego");
         if (ng) {
           var gn = (notes || []).filter(function (x) { return x.id === ng.dataset.id; })[0];
-          selectNote(ng.dataset.id, !!(gn && isCmp(gn) && !gn.resolved));
+          var isC = !!(gn && isCmp(gn) && !gn.resolved);
+          if (isC) cardMode = true;
+          selectNote(ng.dataset.id, isC);
         }
         return;
       }

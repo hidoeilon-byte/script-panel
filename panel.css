@@ -241,3 +241,22 @@ header { padding: 10px 10px 8px; border-bottom: 1px solid var(--line); }
 .sugw { font-size: 11.5px; color: #b3261e; margin-top: 3px; }
 .cardbtns { gap: 4px; }
 .cardmsg { color: #b3261e; }
+/* review card, clean mode */
+.card { display: flex; flex-direction: column; gap: 8px; padding: 2px 0 8px; }
+.cardtop { display: flex; align-items: center; gap: 6px; }
+.cardpos { flex: 1; text-align: center; font-weight: 600; font-size: 13px; }
+.cardnav { display: flex; gap: 3px; }
+.cardbar { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.cardbar span { display: block; height: 100%; background: var(--accent); }
+.cardwhere { font-size: 11.5px; color: var(--muted); line-height: 1.4; border-right: 3px solid var(--line); padding-right: 6px; }
+.cardwhat { font-size: 14px; line-height: 1.5; }
+.sughead { font-size: 11.5px; color: var(--muted); margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
+.sugbox.empty2 { text-align: center; font-size: 12.5px; color: var(--muted); padding: 10px 5px; }
+.cardact { position: sticky; bottom: 0; display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 5px; background: var(--bg); padding: 6px 0 2px; }
+.bigbtn { font: inherit; font-size: 14px; padding: 8px 6px; border-radius: 7px; border: 1px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; }
+.bigbtn.on { background: var(--on); color: var(--on-ink); border-color: var(--on); font-weight: 600; }
+.bigbtn:disabled { opacity: .4; cursor: default; }
+.bigbtn:hover:not(:disabled) { border-color: var(--accent); }
+.linkbtn { font: inherit; font-size: 11.5px; background: none; border: none; color: var(--accent); cursor: pointer; padding: 0; text-decoration: underline; }
+.cardfoot { font-size: 11.5px; color: var(--muted); text-align: center; }
+.startbox { border: 1px solid var(--line); background: var(--card); border-radius: 7px; padding: 8px; margin-bottom: 7px; display: flex; flex-direction: column; gap: 5px; align-items: stretch; text-align: center; }
