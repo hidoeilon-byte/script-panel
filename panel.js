@@ -587,6 +587,46 @@
     list.innerHTML = html;
     window.scrollTo(0, y); list.scrollTop = sy;
   }
+  // ---------- filters for the personal and feedback lists (colour, character, part of the structure)
+  var flt = { c: "", ch: "", st: "" }, charNames = null;
+  function fltColorOf(t, isFb) {
+    if (isFb) return t.cu !== undefined ? t.cu : fbCatColor(t);
+    return t.c || "";
+  }
+  function fltStageOf(t) {
+    var sc = t.sn ? scenes[t.sn - 1] : (t.scene ? scenes.filter(function (x) { return x.h === t.scene; })[0] : null);
+    return sc ? (sc.st || "") : "";
+  }
+  function fltOk(t, isFb) {
+    if (flt.c) { var cc = fltColorOf(t, isFb) || "none"; if (cc !== flt.c) return false; }
+    if (flt.ch && (t.text || "").indexOf(flt.ch) < 0) return false;
+    if (flt.st) { var ss = fltStageOf(t) || "לא שויך"; if (ss !== flt.st) return false; }
+    return true;
+  }
+  function loadCharNames() {
+    if (charNames !== null || !W.paragraphs) return;
+    charNames = [];
+    W.paragraphs().then(function (ps) {
+      var seen = {};
+      ps.forEach(function (p) {
+        if (p.style !== "דמות") return;
+        var n = (p.text || "").replace(/\(.*\)/g, "").trim();
+        if (n && !seen[n]) { seen[n] = true; charNames.push(n); }
+      });
+      renderList();
+    }).catch(function () {});
+  }
+  function fltBar() {
+    loadCharNames();
+    var cOpts = [["", "כל הצבעים"], ["none", "בלי צבע"], ["#ef4444", "לשנות"], ["#22c55e", "להוסיף"], ["#f59e0b", "להסיר"], ["#3b82f6", "לבדוק"], ["#a855f7", "כללי"]];
+    var stOpts = [""].concat(STAGES, ["לא שויך"]);
+    return '<div class="fltbar">' +
+      '<select id="fltc">' + cOpts.map(function (o) { return '<option value="' + o[0] + '"' + (flt.c === o[0] ? " selected" : "") + '>' + o[1] + '</option>'; }).join("") + '</select>' +
+      '<select id="fltch"><option value="">כל הדמויות</option>' + (charNames || []).map(function (n) { return '<option value="' + esc(n) + '"' + (flt.ch === n ? " selected" : "") + '>' + esc(n) + '</option>'; }).join("") + '</select>' +
+      '<select id="fltst">' + stOpts.map(function (o) { return '<option value="' + esc(o) + '"' + (flt.st === o ? " selected" : "") + '>' + (o || "כל החלקים") + '</option>'; }).join("") + '</select>' +
+      '</div>';
+  }
+
   // ---------- משוב: a list from a conversation with the lecturer (own tab, own storage)
   var fbItems = null, fbPaste = "", fbPick = -1, fbEdit = -1, todoPick = -1;
   // colour per category Claude writes in brackets: set from the start, the user can still change it per item
@@ -607,7 +647,9 @@
       [["לשנות", "#ef4444"], ["להוסיף", "#22c55e"], ["להסיר", "#f59e0b"], ["לבדוק", "#3b82f6"], ["כללי", "#a855f7"]].map(function (x) {
         return '<span class="fbleg"><i style="background:' + x[1] + '"></i>' + x[0] + '</span>';
       }).join("") + '</div>';
+    html = fltBar() + html;
     html += '<div class="chglist">' + fbItems.map(function (t, k) {
+      if (!fltOk(t, true)) return "";
       var cols = ["#ef4444", "#f59e0b", "#22c55e", "#3b82f6", "#a855f7"];
       var curc = t.cu !== undefined ? t.cu : fbCatColor(t);
       var dots = fbPick === k ? cols.map(function (c) { return '<button class="fbdot' + (curc === c ? " on" : "") + '" data-i="' + k + '" data-c="' + c + '" style="background:' + c + '"></button>'; }).join("") +
@@ -634,7 +676,9 @@
     var html = '<div class="chgctl"><div class="chgrow"><span class="chgstat">' + open + ' פתוחים מתוך ' + todos.length + '</span></div>' +
       '<div class="todoadd"><input id="todoin" type="text" placeholder="מחשבה או משהו לעבוד עליו…" value="' + esc(todoDraft) + '">' +
       '<button class="lb on" id="todoadd">הוסף</button></div></div>';
+    html = fltBar() + html;
     html += '<div class="chglist">' + todos.map(function (t, k) {
+      if (!fltOk(t, false)) return "";
       return '<div class="todoitem' + (t.done ? " done" : "") + '" data-i="' + k + '"' + (t.c ? ' style="border-inline-start:6px solid ' + t.c + '"' : "") + '>' +
         '<button class="todocheck" data-i="' + k + '">' + (t.done ? "✓" : "") + '</button>' +
         '<div class="todobody"><textarea class="fbta" data-i="' + k + '" rows="2">' + esc(t.text) + '</textarea>' +
@@ -980,6 +1024,10 @@
       sumEdit = -1; renderList();
     });
   list.addEventListener("change", function (e) {
+      if (e.target.id === "fltc" || e.target.id === "fltch" || e.target.id === "fltst") {
+        flt[e.target.id === "fltc" ? "c" : e.target.id === "fltch" ? "ch" : "st"] = e.target.value;
+        renderList(); return;
+      }
       if (!e.target.classList || !e.target.classList.contains("fbta")) return;
       var fi2 = +e.target.dataset.i, nv = e.target.value.trim();
       if (fbItems && fbItems[fi2] && nv && nv !== fbItems[fi2].text) { fbItems[fi2].text = nv; saveFeedback(); }

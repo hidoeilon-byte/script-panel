@@ -334,3 +334,5 @@ body.compact #bar .cnt { display: none; }
 .fbta { width: 100%; box-sizing: border-box; font: inherit; font-size: 13px; line-height: 1.45; border: 1px solid var(--accent); border-radius: 5px; background: var(--bg); color: var(--ink); padding: 4px; }
 .fbta { width: 100%; box-sizing: border-box; font: inherit; font-size: 13px; line-height: 1.45; border: 1px solid transparent; border-radius: 5px; background: transparent; color: var(--ink); padding: 3px 4px; resize: vertical; }
 .fbta:focus { border-color: var(--accent); background: var(--bg); }
+.fltbar { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0 8px; }
+.fltbar select { font: inherit; font-size: 12px; padding: 3px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); max-width: 100%; }
