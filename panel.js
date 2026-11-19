@@ -623,10 +623,10 @@
   }
   function fltBar() {
     loadCharNames();
-    var cOpts = [["", "כל הצבעים"], ["none", "בלי צבע"], ["#ef4444", "לשנות"], ["#22c55e", "להוסיף"], ["#f59e0b", "להסיר"], ["#3b82f6", "לבדוק"], ["#a855f7", "כללי"]];
+    var cOpts = [["", "כל הצבעים"], ["#ef4444", "לשנות"], ["#22c55e", "להוסיף"], ["#f59e0b", "להסיר"], ["#3b82f6", "לבדוק"], ["#a855f7", "כללי"]];
     var stOpts = [""].concat(STAGES, ["לא שויך"]);
     return '<div class="fltbar">' +
-      '<div class="fltcols"><button class="fltcolbtn" id="fltcolbtn">צבע ▾</button>' + (colOpen ? cOpts.map(function (o) { return '<button class="fltcol' + (flt.c === o[0] ? " on" : "") + '" data-c="' + o[0] + '" title="' + o[1] + '" style="background:' + (o[0] && o[0] !== "none" ? o[0] : "transparent") + '"></button>'; }).join("") : "") + '</div>' +
+      '<div class="fltcols"><button class="fltcolbtn" id="fltcolbtn">צבע ▾</button>' + (colOpen ? cOpts.map(function (o) { return '<button class="fltcol' + (flt.c === o[0] ? " on" : "") + '" data-c="' + o[0] + '" title="' + o[1] + '" style="background:' + (o[0] || "#ffffff") + '"></button>'; }).join("") : "") + '</div>' +
       '<select id="fltch"><option value="">כל הדמויות</option>' + (charNames || []).map(function (n) { return '<option value="' + esc(n) + '"' + (flt.ch === n ? " selected" : "") + '>' + esc(n) + '</option>'; }).join("") + '</select>' +
       '<select id="fltst">' + stOpts.map(function (o) { return '<option value="' + esc(o) + '"' + (flt.st === o ? " selected" : "") + '>' + (o || "כל החלקים") + '</option>'; }).join("") + '</select>' +
       '</div>';
