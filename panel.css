@@ -366,3 +366,7 @@ body.noheader #styles, body.noheader .status, body.noheader #locbox { display: n
 .todoitem .todoacts .fbmeta { order: 6; width: 100%; }
 .fbleg { font: inherit; font-size: 12px; background: none; border: 1px solid transparent; border-radius: 6px; padding: 2px 5px; color: var(--ink); cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
 .fbleg.on { border-color: var(--ink); }
+.todoitem .todoacts { flex-wrap: nowrap; align-items: center; gap: 6px; }
+.todoitem .todoacts > * { flex: 0 0 auto; }
+.todoitem .todoacts .fbcap { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 45%; }
+.todoitem .todoacts .fbmeta { flex: 1 1 100%; }
