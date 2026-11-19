@@ -624,12 +624,21 @@
     if (cur && names.indexOf(cur) < 0) names.push(cur);
     return names.map(function (n) { return '<option value="' + esc(n) + '"' + (cur === n ? " selected" : "") + '>' + esc(n) + '</option>'; }).join("");
   }
-  function fltBar() {
+  var partsOpen = false;
+  function legendHtml() {
+    return '<div class="fblegend"><span class="lbl">מקרא:</span> ' +
+      STAGES.map(function (x) {
+        var c = STAGE_COLORS[x];
+        return '<button class="fbleg' + (flt.c === c ? " on" : "") + '" data-c="' + c + '"><i style="background:' + c + '"></i>' + x + '</button>';
+      }).join("") + '</div>';
+  }
+  function fltBar(isFb) {
     loadCharNames();
     var cOpts = [["", "כל הצבעים"], ["#ef4444", "לשנות"], ["#22c55e", "להוסיף"], ["#f59e0b", "להסיר"], ["#3b82f6", "לבדוק"], ["#a855f7", "כללי"]];
     var stOpts = [""].concat(STAGES, ["לא שויך"]);
     return '<div class="fltbar">' +
       '<select id="fltch"><option value="">כל הדמויות</option>' + (charNames || []).map(function (n) { return '<option value="' + esc(n) + '"' + (flt.ch === n ? " selected" : "") + '>' + esc(n) + '</option>'; }).join("") + '</select>' +
+      (isFb ? '<button class="fltpartsbtn' + (partsOpen ? " on" : "") + '" id="fltparts">חלקים ▾</button>' : '') +
       '</div>';
   }
 
@@ -659,12 +668,8 @@
       '<textarea id="fbpaste" rows="4" placeholder="הדבק כאן את הרשימה, שורה לכל פריט. למשל: [לשנות] …">' + esc(fbPaste) + '</textarea>' +
       '<button class="lb on" id="fbpasteok">הוסף לרשימה</button> <span class="chgstat" id="fbres"></span></div></details>' +
       '<div class="chgctl"><div class="chgrow"><span class="chgstat">' + open + ' פתוחים מתוך ' + fbItems.length + '</span></div></div>';
-    html += fltBar();
-    html += '<div class="fblegend"><span class="lbl">מקרא:</span> ' +
-      STAGES.map(function (x) {
-        var c = STAGE_COLORS[x];
-        return '<button class="fbleg' + (flt.c === c ? " on" : "") + '" data-c="' + c + '"><i style="background:' + c + '"></i>' + x + '</button>';
-      }).join("") + '</div>';
+    html += fltBar(true);
+    if (partsOpen) html += legendHtml();
     html += '<datalist id="charlist">' + (charNames || []).map(function (n) { return '<option value="' + esc(n) + '">'; }).join("") + '</datalist>';
     html += '<div class="chglist">' + fbItems.map(function (t, k) {
       if (!fltOk(t, true)) return "";
@@ -695,7 +700,7 @@
     var html = '<div class="chgctl"><div class="chgrow"><span class="chgstat">' + open + ' פתוחים מתוך ' + todos.length + '</span></div>' +
       '<div class="todoadd"><input id="todoin" type="text" placeholder="מחשבה או משהו לעבוד עליו…" value="' + esc(todoDraft) + '">' +
       '<button class="lb on" id="todoadd">הוסף</button></div></div>';
-    html = fltBar() + html;
+    html = fltBar(true) + (partsOpen ? legendHtml() : "") + html;
     html += '<div class="chglist">' + todos.map(function (t, k) {
       if (!fltOk(t, false)) return "";
       return '<div class="todoitem' + (t.done ? " done" : "") + '" data-i="' + k + '"' + (stageColorOf(t) ? ' style="border-inline-start:6px solid ' + stageColorOf(t) + '"' : "") + '>' +
@@ -1127,6 +1132,7 @@
         return;
       }
       if (e.target.closest("#fltcolbtn")) { colOpen = !colOpen; renderList(); return; }
+      if (e.target.closest("#fltparts")) { partsOpen = !partsOpen; renderList(); return; }
       var flg = e.target.closest(".fbleg");
       if (flg) { var lc = flg.dataset.c; flt.c = flt.c === lc ? "" : lc; renderList(); return; }
       var fcolB = e.target.closest(".fltcol");
