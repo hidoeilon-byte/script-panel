@@ -229,9 +229,14 @@
             p.load("text,style");
             return p;
           });
+          var reps = cs.items.map(function (c) {
+            try { var r = c.replies; r.load("items/content"); return r; } catch (e) { return null; }
+          });
           return ctx.sync().then(function () {
             return cs.items.map(function (c, i) {
+              var rr = reps[i] && reps[i].items ? reps[i].items.map(function (x) { return (x.content || "").trim(); }) : [];
               return { id: c.id, text: (c.content || "").trim(), resolved: !!c.resolved, author: c.authorName || "",
+                       replies: rr,
                        where: (paras[i].text || "").trim().slice(0, 90), style: paras[i].style || "" };
             });
           });
