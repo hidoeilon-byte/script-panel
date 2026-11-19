@@ -633,7 +633,7 @@
   }
 
   // ---------- משוב: a list from a conversation with the lecturer (own tab, own storage)
-  var fbItems = null, fbPaste = "", fbPick = -1, fbEdit = -1, todoPick = -1;
+  var fbItems = null, fbPaste = "", fbPick = -1, fbEdit = -1, todoPick = -1, fbMeta = -1;
   // colour per category Claude writes in brackets: set from the start, the user can still change it per item
   var FB_CAT_COLORS = { "לשנות": "#ef4444", "להוסיף": "#22c55e", "להסיר": "#f59e0b", "לבדוק": "#3b82f6", "כללי": "#a855f7" };
   function fbCatColor(t) {
@@ -665,8 +665,9 @@
         '<button class="todocheck fbcheck" data-i="' + k + '">' + (t.done ? "✓" : "") + '</button>' +
         '<div class="todobody"><textarea class="fbta" data-i="' + k + '" rows="2">' + esc(t.text) + '</textarea>' +
         (t.sn ? '<button class="linkbtn fbscene" data-sn="' + t.sn + '">📍 סצנה ' + t.sn + '</button>' : '') + '</div>' +
-        '<div class="fbmeta"><select class="fbch" data-i="' + k + '"><option value="">דמות</option>' + fbCharOpts(t.ch) + '</select>' +
-        '<select class="fbpt" data-i="' + k + '"><option value="">חלק</option>' + STAGES.map(function (x) { return '<option value="' + x + '"' + (t.pt === x ? " selected" : "") + '>' + x + '</option>'; }).join("") + '</select></div>' +
+        '<div class="fbcap" data-i="' + k + '">' + esc([(t.ch || "דמות?"), (t.pt || fltStageOf(t) || "חלק?")].join(" · ")) + '</div>' +
+        (fbMeta === k ? '<div class="fbmeta"><select class="fbch" data-i="' + k + '"><option value="">דמות</option>' + fbCharOpts(t.ch) + '</select>' +
+        '<select class="fbpt" data-i="' + k + '"><option value="">חלק</option>' + STAGES.map(function (x) { return '<option value="' + x + '"' + ((t.pt || fltStageOf(t)) === x ? " selected" : "") + '>' + x + '</option>'; }).join("") + '</select></div>' : '') +
         '<div class="todoacts">' + curBtn + '<div class="fbdots">' + dots + '</div><button class="linkbtn fbdel" data-i="' + k + '">מחק</button></div></div>';
     }).join("") + '</div>';
     if (!fbItems.length) html += '<div class="empty">עוד אין פריטים מהשיחה עם המרצה.</div>';
@@ -1139,6 +1140,8 @@
         }
         var fc = e.target.closest(".fbcheck");
         if (fc) { var fi = +fc.dataset.i; fbItems[fi].done = !fbItems[fi].done; saveFeedback(); renderFeedback(fl); return; }
+        var fcap = e.target.closest(".fbcap");
+        if (fcap) { var fci = +fcap.dataset.i; fbMeta = fbMeta === fci ? -1 : fci; renderFeedback(fl); return; }
         var fcur = e.target.closest(".fbcur");
         if (fcur) { var ci2 = +fcur.dataset.i; fbPick = fbPick === ci2 ? -1 : ci2; renderFeedback(fl); return; }
         var fdot = e.target.closest(".fbdot");
