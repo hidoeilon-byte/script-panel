@@ -583,7 +583,8 @@
   function renderFeedback(list) {
     if (!fbItems) fbItems = W.loadFeedback() || [];
     var open = fbItems.filter(function (t) { return !t.done; }).length;
-    var html = '<details class="sumimp" open><summary>הוסף רשימה מ-Claude</summary><div class="sumbody">' +
+    var html = '<div class="chgrow"><button class="lb on" id="fbopen">פתח את סיכום השיחה האחרון עם המרצה</button> <span class="chgstat" id="fbopened"></span></div>' +
+      '<details class="sumimp" open><summary>הוסף רשימה מ-Claude</summary><div class="sumbody">' +
       '<textarea id="fbpaste" rows="4" placeholder="הדבק כאן את הרשימה, שורה לכל פריט. למשל: [לשנות] …">' + esc(fbPaste) + '</textarea>' +
       '<button class="lb on" id="fbpasteok">הוסף לרשימה</button> <span class="chgstat" id="fbres"></span></div></details>' +
       '<div class="chgctl"><div class="chgrow"><span class="chgstat">' + open + ' פתוחים מתוך ' + fbItems.length + '</span></div></div>';
@@ -1007,6 +1008,10 @@
         return;
       }
       if (view === "feedback") {
+        if (e.target.closest("#fbopen")) {
+          W.sendRequest("openfb", "").then(function () { $("fbopened").textContent = "נפתח. אם לא, בדוק בלשונית המסמכים"; }).catch(showErr);
+          return;
+        }
         if (e.target.closest("#fbpasteok")) {
           var fn = 0;
           ($("fbpaste").value || "").split("\n").forEach(function (ln) {
