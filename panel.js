@@ -630,7 +630,6 @@
     var stOpts = [""].concat(STAGES, ["לא שויך"]);
     return '<div class="fltbar">' +
       '<select id="fltch"><option value="">כל הדמויות</option>' + (charNames || []).map(function (n) { return '<option value="' + esc(n) + '"' + (flt.ch === n ? " selected" : "") + '>' + esc(n) + '</option>'; }).join("") + '</select>' +
-      '<select id="fltst">' + stOpts.map(function (o) { return '<option value="' + esc(o) + '"' + (flt.st === o ? " selected" : "") + '>' + (o || "כל החלקים") + '</option>'; }).join("") + '</select>' +
       '</div>';
   }
 
@@ -672,7 +671,7 @@
       var cols = STAGES.map(function (x) { return STAGE_COLORS[x]; });
       var curc = stageColorOf(t);
       var catNow = fbCatName(t);
-      var dots = fbPick === k ? ["לשנות", "להוסיף", "להסיר", "לבדוק", "כללי"].map(function (c) { return '<button class="fbcatbtn' + (catNow === c ? " on" : "") + '" data-i="' + k + '" data-cat="' + c + '">' + c + '</button>'; }).join("") : '';
+      var dots = '';
       var curBtn = '<button class="fbcur" data-i="' + k + '" title="שנה צבע" style="background:' + (curc || "transparent") + '"></button>';
       var col = stageColorOf(t);
       return '<div class="todoitem' + (t.done ? " done" : "") + '" data-i="' + k + '"' + (col ? ' style="border-inline-start:6px solid ' + col + '"' : "") + '>' +
