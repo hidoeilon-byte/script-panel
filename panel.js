@@ -367,7 +367,7 @@
     return W.markNote(id, false).catch(function () {});
   }
   function selectNote(id, isCompare) {
-    cardEdit = false; cardMsg = ""; instrOpen = false;
+    cardEdit = false; cardMsg = ""; instrOpen = false; roundDone = false;
     return markOff().then(function () {
       noteSel = id;
       renderList();
@@ -378,13 +378,24 @@
     }).catch(showErr);
   }
   function openCmp() { return (notes || []).filter(function (n) { return isCmp(n) && !n.resolved; }); }
+  var roundDone = false;
+  function endRound() { roundDone = true; cardEdit = false; instrOpen = false; markOff(); noteSel = ""; renderList(); }
   function stepCmp(dir) {
     var co = openCmp();
     if (!co.length) { markOff(); noteSel = ""; renderList(); return; }
     var ix = co.map(function (n) { return n.id; }).indexOf(noteSel);
-    if (dir > 0) ix = ix < 0 ? 0 : (ix + 1) % co.length;
+    if (dir > 0) { if (ix === co.length - 1) { endRound(); return; } ix = ix < 0 ? 0 : ix + 1; }
     else ix = ix < 0 ? co.length - 1 : (ix - 1 + co.length) % co.length;
     selectNote(co[ix].id, true);
+  }
+  // after a note was handled: go to the next open note that came after it in the order before the change
+  function snapOrder() { return { ids: openCmp().map(function (n) { return n.id; }), cur: noteSel }; }
+  function advanceAfter(snap) {
+    var open = openCmp().map(function (n) { return n.id; });
+    var k = snap.ids.indexOf(snap.cur);
+    for (var i = k + 1; i < snap.ids.length; i++) if (open.indexOf(snap.ids[i]) >= 0) { selectNote(snap.ids[i], true); return; }
+    if (!open.length) { markOff(); noteSel = ""; renderList(); return; }
+    endRound();
   }
   function sugHtml(sg) {
     if (!sg) return "";
@@ -488,6 +499,13 @@
   function renderNotes(list) {
     if (!notes) { list.innerHTML = '<div class="empty">טוען הערות…</div>'; return; }
     var cmpOpen = notes.filter(function (n) { return isCmp(n) && !n.resolved; });
+    if (cardMode && cmpOpen.length && roundDone) {
+      list.innerHTML = '<div class="card"><div class="cardtop"><button class="lb" id="cardlist">☰ רשימה</button><span class="cardpos">סיימת סיבוב</span></div>' +
+        '<div class="cardbar"><span style="width:100%"></span></div>' +
+        '<div class="sugbox empty2">נשארו ' + cmpOpen.length + ' השוואות פתוחות (דילגת עליהן או שהן מחכות ל-Claude).</div>' +
+        '<button class="bigbtn on" id="cardrestart">התחל שוב מהראשונה שפתוחה</button></div>';
+      return;
+    }
     if (cardMode && cmpOpen.length) { renderCard(list, cmpOpen); return; }
     if (!cmpOpen.length) cardMode = false;
     var shown = notes.filter(function (n) { return showDone || !n.resolved; });
@@ -777,26 +795,26 @@
         if (e.target.closest("#instropen")) { instrOpen = true; cardMsg = ""; renderList(); var it = $("instrtext"); if (it) it.focus(); return; }
         if (e.target.closest("#instrcancel")) { instrOpen = false; renderList(); return; }
         if (e.target.closest("#keepscr")) {
-          var kid = noteSel;
+          var kid = noteSel, snK = snapOrder();
           markOff().then(function () { return W.replyNote(kid, "טופל – התסריט נשאר כמו שהוא"); }).then(function () { return W.resolveNote(kid, true); })
-            .then(refreshNotes).then(function () { stepCmp(1); }).catch(showErr);
+            .then(refreshNotes).then(function () { advanceAfter(snK); }).catch(showErr);
           return;
         }
         if (e.target.closest("#dosug")) {
-          var did = noteSel;
+          var did = noteSel, snD = snapOrder();
           cardMsg = "שומר…"; renderList();
           W.replyNote(did, "הוראה: תבצע את ההצעה שכתבת בתשובה הקודמת להערה הזו. כתוב אותה כפעולות שאפשר להכניס (במקום/יבוא, מחק, מחק פסקה, אחרי + שורות עם סגנון).")
-            .then(function () { cardMsg = ""; return refreshNotes().then(function () { stepCmp(1); }); })
+            .then(function () { cardMsg = ""; return refreshNotes().then(function () { advanceAfter(snD); }); })
             .catch(function (er) { cardMsg = "לא נשמר: " + (er && er.message ? er.message : er); renderList(); });
           return;
         }
         if (e.target.closest("#instrsave")) {
-          var txt = ($("instrtext").value || "").trim(), iid = noteSel;
+          var txt = ($("instrtext").value || "").trim(), iid = noteSel, snI = snapOrder();
           if (!txt) { cardMsg = "כתוב הוראה לפני השמירה."; instrOpen = false; renderList(); return; }
           instrOpen = false; cardMsg = "שומר…"; renderList();
           W.replyNote(iid, "הוראה: " + txt.replace(/\s*\n\s*/g, " ")).then(function () {
             cardMsg = "";
-            return refreshNotes().then(function () { stepCmp(1); });
+            return refreshNotes().then(function () { advanceAfter(snI); });
           }).catch(function (er) { cardMsg = "לא נשמר: " + (er && er.message ? er.message : er); renderList(); });
           return;
         }
@@ -806,7 +824,8 @@
           var startId = co0.map(function (n) { return n.id; }).indexOf(noteSel) >= 0 ? noteSel : (withS[0] || co0[0]).id;
           selectNote(startId, true); return;
         }
-        if (e.target.closest("#cardlist")) { cardMode = false; cardEdit = false; markOff(); renderList(); return; }
+        if (e.target.closest("#cardrestart")) { roundDone = false; var co1 = openCmp(); if (co1.length) selectNote(co1[0].id, true); return; }
+        if (e.target.closest("#cardlist")) { roundDone = false; cardMode = false; cardEdit = false; markOff(); renderList(); return; }
         if (e.target.closest("#cmtview")) { cmtShow = !cmtShow; lsSet("cmtShow", cmtShow ? "1" : ""); renderList(); W.sendRequest("comments", cmtShow ? "show" : "hide").catch(showErr); return; }
         if (e.target.closest("#walkshow")) { walkOpen = walkOpen === "walk" ? false : "walk"; renderList(); return; }
         if (e.target.closest("#prepshow")) { walkOpen = walkOpen === "prep" ? false : "prep"; renderList(); return; }
@@ -817,12 +836,12 @@
         if (e.target.closest("#cardedit")) { cardEdit = true; cardMsg = ""; renderList(); var ct = $("cardtext"); if (ct) ct.focus(); return; }
         if (e.target.closest("#cardcancel")) { cardEdit = false; renderList(); return; }
         if (e.target.closest("#cardok")) {
-          var idk = noteSel;
-          markOff().then(function () { return W.resolveNote(idk, true); }).then(refreshNotes).then(function () { stepCmp(1); }).catch(showErr);
+          var idk = noteSel, snO = snapOrder();
+          markOff().then(function () { return W.resolveNote(idk, true); }).then(refreshNotes).then(function () { advanceAfter(snO); }).catch(showErr);
           return;
         }
         if (e.target.closest("#cardins")) {
-          var nid = noteSel, cn = (notes || []).filter(function (x) { return x.id === nid; })[0];
+          var nid = noteSel, snN = snapOrder(), cn = (notes || []).filter(function (x) { return x.id === nid; })[0];
           if (!cn) return;
           var sg2 = parseSug(cardEdit && $("cardtext") ? $("cardtext").value : sugRaw(cn));
           if (!sg2 || !sg2.ok) { cardMsg = "ההצעה לא בפורמט שאפשר להכניס. ערוך אותה או דלג."; renderList(); return; }
@@ -832,7 +851,7 @@
             cardMsg = "מכניס…"; renderList();
             return markOff().then(function () { return W.applySuggestion(nid, sg2); }).then(function () {
               cardEdit = false; cardMsg = "";
-              return refreshNotes().then(function () { stepCmp(1); });
+              return refreshNotes().then(function () { advanceAfter(snN); });
             }).catch(function (er) { cardMsg = "לא הוכנס: " + (er && er.message ? er.message : er); renderList(); });
           });
           return;
