@@ -636,9 +636,14 @@
   var fbItems = null, fbPaste = "", fbPick = -1, fbEdit = -1, todoPick = -1, fbMeta = -1;
   // colour per category Claude writes in brackets: set from the start, the user can still change it per item
   var FB_CAT_COLORS = { "לשנות": "#ef4444", "להוסיף": "#22c55e", "להסיר": "#f59e0b", "לבדוק": "#3b82f6", "כללי": "#a855f7" };
-  function fbCatColor(t) {
+  function fbCatName(t) {
+    if (t.cat) return t.cat;
     var m = (t.text || "").match(/\[([^\]]+)\]/);
-    return m && FB_CAT_COLORS[m[1].trim()] ? FB_CAT_COLORS[m[1].trim()] : "";
+    return m ? m[1].trim() : "";
+  }
+  function fbCatColor(t) {
+    var n = fbCatName(t);
+    return FB_CAT_COLORS[n] ? FB_CAT_COLORS[n] : "";
   }
   function renderFeedback(list) {
     if (!fbItems) fbItems = W.loadFeedback() || [];
@@ -663,7 +668,7 @@
       var col = t.cu !== undefined ? t.cu : fbCatColor(t);
       return '<div class="todoitem' + (t.done ? " done" : "") + '" data-i="' + k + '"' + (col ? ' style="border-inline-start:6px solid ' + col + '"' : "") + '>' +
         '<button class="todocheck fbcheck" data-i="' + k + '">' + (t.done ? "✓" : "") + '</button>' +
-        '<div class="todobody"><textarea class="fbta" data-i="' + k + '" rows="2">' + esc(t.text) + '</textarea>' +
+        '<div class="todobody"><textarea class="fbta" data-i="' + k + '" rows="2">' + esc(String(t.text || "").replace(/^\s*\[[^\]]+\]\s*/, "")) + '</textarea>' +
         (t.sn ? '<button class="linkbtn fbscene" data-sn="' + t.sn + '">📍 סצנה ' + t.sn + '</button>' : '') + '</div>' +
         '<div class="fbcap" data-i="' + k + '">' + esc([(t.ch || "דמות?"), (t.pt || fltStageOf(t) || "חלק?")].join(" · ")) + '</div>' +
         (fbMeta === k ? '<div class="fbmeta"><select class="fbch" data-i="' + k + '"><option value="">דמות</option>' + fbCharOpts(t.ch) + '</select>' +
@@ -1046,7 +1051,7 @@
       if (tc.contains("fbpt")) { fbItems[+e.target.dataset.i].pt = e.target.value; saveFeedback(); return; }
       if (!tc.contains("fbta")) return;
       var fi2 = +e.target.dataset.i, nv = e.target.value.trim();
-      if (fbItems && fbItems[fi2] && nv && nv !== fbItems[fi2].text) { fbItems[fi2].text = nv; saveFeedback(); }
+      if (fbItems && fbItems[fi2] && nv && nv !== fbItems[fi2].text.replace(/^\s*\[[^\]]+\]\s*/, "")) { fbItems[fi2].cat = fbCatName(fbItems[fi2]); fbItems[fi2].text = nv; saveFeedback(); }
   });
   list.addEventListener("keydown", function (e) {
       if (e.target.classList && e.target.classList.contains("fbta") && e.key === "Enter" && !e.shiftKey) { e.preventDefault(); e.target.blur(); return; }
@@ -1130,7 +1135,10 @@
             var ch = chm ? chm[1].trim() : "", pt = ptm ? ptm[1].trim() : "";
             var clean = sm ? t.replace(/^סצנ(?:ה|ות)[^:\[]*:\s*/, "").trim() : t;
             clean = clean.replace(/\|?\s*דמות:[^|]*/g, "").replace(/\|?\s*חלק:[^|]*/g, "").trim();
-            fbItems.push({ text: clean || t, done: false, sn: sn, ch: ch, pt: STAGES.indexOf(pt) >= 0 ? pt : "" }); fn++;
+            var catm = (clean || t).match(/\[([^\]]+)\]/);
+            var cat = catm ? catm[1].trim() : "";
+            var body = (clean || t).replace(/\[[^\]]+\]\s*/, "").trim();
+            fbItems.push({ text: body || clean || t, done: false, sn: sn, cat: cat, ch: ch, pt: STAGES.indexOf(pt) >= 0 ? pt : "" }); fn++;
           });
           fbPaste = "";
           if (fn) saveFeedback();
