@@ -591,7 +591,8 @@
     html += '<div class="chglist">' + fbItems.map(function (t, k) {
       return '<div class="todoitem' + (t.done ? " done" : "") + '" data-i="' + k + '">' +
         '<button class="todocheck fbcheck" data-i="' + k + '">' + (t.done ? "✓" : "") + '</button>' +
-        '<div class="todobody"><div class="todotext">' + esc(t.text) + '</div></div>' +
+        '<div class="todobody"><div class="todotext">' + esc(t.text) + '</div>' +
+        (t.sn ? '<button class="linkbtn fbscene" data-sn="' + t.sn + '">📍 סצנה ' + t.sn + '</button>' : '') + '</div>' +
         '<div class="todoacts"><button class="linkbtn fbdel" data-i="' + k + '">מחק</button></div></div>';
     }).join("") + '</div>';
     if (!fbItems.length) html += '<div class="empty">עוד אין פריטים מהשיחה עם המרצה.</div>';
@@ -1016,7 +1017,10 @@
           var fn = 0;
           ($("fbpaste").value || "").split("\n").forEach(function (ln) {
             var t = ln.trim(); if (!t) return;
-            fbItems.push({ text: t, done: false }); fn++;
+            var sm = t.match(/סצנה\s*(\d+)/);
+            var sn = sm ? +sm[1] : 0;
+            var clean = sm ? t.replace(/סצנה\s*\d+\s*[:\-–.]?\s*/, "").trim() : t;
+            fbItems.push({ text: clean || t, done: false, sn: sn }); fn++;
           });
           fbPaste = "";
           if (fn) saveFeedback();
@@ -1026,6 +1030,8 @@
         }
         var fc = e.target.closest(".fbcheck");
         if (fc) { var fi = +fc.dataset.i; fbItems[fi].done = !fbItems[fi].done; saveFeedback(); renderFeedback(list); return; }
+        var fsc = e.target.closest(".fbscene");
+        if (fsc) { W.goToScene(+fsc.dataset.sn - 1).catch(showErr); return; }
         var fdl = e.target.closest(".fbdel");
         if (fdl) { fbItems.splice(+fdl.dataset.i, 1); saveFeedback(); renderFeedback(list); return; }
         return;
