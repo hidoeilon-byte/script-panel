@@ -728,9 +728,8 @@
       });
     }
     if (view === "struct") {
-      var seqs = sequences(), n = 0;
-      var hasSeq = seqs.some(function (q) { return q.start >= 0; });
-      if (!hasSeq) html += '<div class="hint box">אין עדיין סיקוונסים. פתח סצנה (✎) וסמן "תחילת סיקוונס".</div>';
+      // the scenes already show inside the parts above, so the old sequence list is not repeated here
+      var seqs = [], n = 0;
       seqs.forEach(function (q) {
         var items = q.items.filter(visible);
         if (q.start >= 0) {
