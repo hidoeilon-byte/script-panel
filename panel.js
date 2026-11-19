@@ -587,6 +587,9 @@
     var html = '<div class="chgctl"><div class="chgrow"><span class="chgstat">' + open + ' פתוחים מתוך ' + todos.length + '</span></div>' +
       '<div class="todoadd"><input id="todoin" type="text" placeholder="מחשבה או משהו לעבוד עליו…" value="' + esc(todoDraft) + '">' +
       '<button class="lb on" id="todoadd">הוסף</button></div></div>';
+    html += '<details class="sumimp"><summary>הוסף רשימה מ-Claude</summary><div class="sumbody">' +
+      '<textarea id="todopaste" rows="4" placeholder="הדבק כאן את הרשימה, שורה לכל פריט. למשל: [לשנות] …"></textarea>' +
+      '<button class="lb on" id="todopasteok">הוסף לרשימה</button> <span class="chgstat" id="todopasteres"></span></div></details>';
     html += '<div class="chglist">' + todos.map(function (t, k) {
       return '<div class="todoitem' + (t.done ? " done" : "") + '" data-i="' + k + '">' +
         '<button class="todocheck" data-i="' + k + '">' + (t.done ? "✓" : "") + '</button>' +
@@ -987,6 +990,16 @@
       }
       if (view === "todo") {
         if (e.target.closest("#todoadd")) { todoDraft = $("todoin").value; todoAdd(); return; }
+        if (e.target.closest("#todopasteok")) {
+          var n = 0;
+          ($("todopaste").value || "").split("\n").forEach(function (ln) {
+            var t = ln.trim(); if (!t) return;
+            todos.push({ text: t, done: false, scene: "" }); n++;
+          });
+          if (n) { saveTodos(); renderList(); }
+          $("todopasteres").textContent = n ? "נוספו " + n + " פריטים" : "אין מה להוסיף";
+          return;
+        }
         var tk = e.target.closest(".todocheck");
         if (tk) { var ti = +tk.dataset.i; todos[ti].done = !todos[ti].done; saveTodos(); renderList(); return; }
         var td = e.target.closest(".tododel");
