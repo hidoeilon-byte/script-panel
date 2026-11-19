@@ -160,10 +160,10 @@
   // three groups; each group has two sub-tabs
   var GROUPS = [
     { g: "script", t: "תסריט", subs: [["heads", "כותרות"], ["struct", "מבנה"]] },
-    { g: "notes", t: "הערות", subs: [["notes", "הערות"], ["todo", "שלי"]] },
+    { g: "notes", t: "הערות", subs: [["notes", "הערות"], ["todo", "שלי"], ["feedback", "משוב"]] },
     { g: "tools", t: "כלים", subs: [["changes", "שינויים"], ["tools", "כלים"]] }
   ];
-  function groupOf(v) { return v === "heads" || v === "struct" ? "script" : v === "notes" || v === "todo" ? "notes" : "tools"; }
+  function groupOf(v) { return v === "heads" || v === "struct" ? "script" : v === "notes" || v === "todo" || v === "feedback" ? "notes" : "tools"; }
   function renderBar() {
     var cur = groupOf(view), gb = GROUPS.filter(function (x) { return x.g === cur; })[0];
     $("bar").innerHTML =
@@ -578,6 +578,26 @@
     list.innerHTML = html;
     window.scrollTo(0, y); list.scrollTop = sy;
   }
+  // ---------- משוב: a list from a conversation with the lecturer (own tab, own storage)
+  var fbItems = null, fbPaste = "";
+  function renderFeedback(list) {
+    if (!fbItems) fbItems = W.loadFeedback() || [];
+    var open = fbItems.filter(function (t) { return !t.done; }).length;
+    var html = '<details class="sumimp" open><summary>הוסף רשימה מ-Claude</summary><div class="sumbody">' +
+      '<textarea id="fbpaste" rows="4" placeholder="הדבק כאן את הרשימה, שורה לכל פריט. למשל: [לשנות] …">' + esc(fbPaste) + '</textarea>' +
+      '<button class="lb on" id="fbpasteok">הוסף לרשימה</button> <span class="chgstat" id="fbres"></span></div></details>' +
+      '<div class="chgctl"><div class="chgrow"><span class="chgstat">' + open + ' פתוחים מתוך ' + fbItems.length + '</span></div></div>';
+    html += '<div class="chglist">' + fbItems.map(function (t, k) {
+      return '<div class="todoitem' + (t.done ? " done" : "") + '" data-i="' + k + '">' +
+        '<button class="todocheck fbcheck" data-i="' + k + '">' + (t.done ? "✓" : "") + '</button>' +
+        '<div class="todobody"><div class="todotext">' + esc(t.text) + '</div></div>' +
+        '<div class="todoacts"><button class="linkbtn fbdel" data-i="' + k + '">מחק</button></div></div>';
+    }).join("") + '</div>';
+    if (!fbItems.length) html += '<div class="empty">עוד אין פריטים מהשיחה עם המרצה.</div>';
+    list.innerHTML = html;
+  }
+  function saveFeedback() { W.saveFeedback(fbItems); }
+
   // ---------- personal list (שלי): thoughts and things to work on, kept in the document
   var todos = null, todoDraft = "", todoLinking = "";
   function saveTodos() { W.saveTodo(todos); }
@@ -587,9 +607,6 @@
     var html = '<div class="chgctl"><div class="chgrow"><span class="chgstat">' + open + ' פתוחים מתוך ' + todos.length + '</span></div>' +
       '<div class="todoadd"><input id="todoin" type="text" placeholder="מחשבה או משהו לעבוד עליו…" value="' + esc(todoDraft) + '">' +
       '<button class="lb on" id="todoadd">הוסף</button></div></div>';
-    html += '<details class="sumimp"><summary>הוסף רשימה מ-Claude</summary><div class="sumbody">' +
-      '<textarea id="todopaste" rows="4" placeholder="הדבק כאן את הרשימה, שורה לכל פריט. למשל: [לשנות] …"></textarea>' +
-      '<button class="lb on" id="todopasteok">הוסף לרשימה</button> <span class="chgstat" id="todopasteres"></span></div></details>';
     html += '<div class="chglist">' + todos.map(function (t, k) {
       return '<div class="todoitem' + (t.done ? " done" : "") + '" data-i="' + k + '">' +
         '<button class="todocheck" data-i="' + k + '">' + (t.done ? "✓" : "") + '</button>' +
@@ -692,6 +709,7 @@
     if (view === "tools") { list.className = "view-tools"; renderTools(list); return; }
     if (view === "notes") { list.className = "view-notes"; renderNotes(list); return; }
     if (view === "todo") { list.className = "view-notes"; renderTodo(list); return; }
+    if (view === "feedback") { list.className = "view-notes"; renderFeedback(list); return; }
     list.className = view === "struct" ? "view-struct" : "";
     if (!scenes.length) {
       list.innerHTML = '<div class="empty">אין עדיין סצנות.<br>כותרת סצנה חדשה: Tab עד שמגיעים לסצנה</div>';
@@ -988,18 +1006,27 @@
           "\n\nעזור לי לחשוב על זה. אם צריך תיקון בתסריט, כתוב אותו בפורמט ההצעה הרגיל. אל תשנה את המסמך.");
         return;
       }
-      if (view === "todo") {
-        if (e.target.closest("#todoadd")) { todoDraft = $("todoin").value; todoAdd(); return; }
-        if (e.target.closest("#todopasteok")) {
-          var n = 0;
-          ($("todopaste").value || "").split("\n").forEach(function (ln) {
+      if (view === "feedback") {
+        if (e.target.closest("#fbpasteok")) {
+          var fn = 0;
+          ($("fbpaste").value || "").split("\n").forEach(function (ln) {
             var t = ln.trim(); if (!t) return;
-            todos.push({ text: t, done: false, scene: "" }); n++;
+            fbItems.push({ text: t, done: false }); fn++;
           });
-          if (n) { saveTodos(); renderList(); }
-          $("todopasteres").textContent = n ? "נוספו " + n + " פריטים" : "אין מה להוסיף";
+          fbPaste = "";
+          if (fn) saveFeedback();
+          $("fbres").textContent = fn ? "נוספו " + fn + " פריטים" : "אין מה להוסיף";
+          if (fn) renderFeedback(list);
           return;
         }
+        var fc = e.target.closest(".fbcheck");
+        if (fc) { var fi = +fc.dataset.i; fbItems[fi].done = !fbItems[fi].done; saveFeedback(); renderFeedback(list); return; }
+        var fdl = e.target.closest(".fbdel");
+        if (fdl) { fbItems.splice(+fdl.dataset.i, 1); saveFeedback(); renderFeedback(list); return; }
+        return;
+      }
+      if (view === "todo") {
+        if (e.target.closest("#todoadd")) { todoDraft = $("todoin").value; todoAdd(); return; }
         var tk = e.target.closest(".todocheck");
         if (tk) { var ti = +tk.dataset.i; todos[ti].done = !todos[ti].done; saveTodos(); renderList(); return; }
         var td = e.target.closest(".tododel");
