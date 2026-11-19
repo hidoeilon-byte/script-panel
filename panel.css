@@ -356,3 +356,4 @@ body.noheader #styles, body.noheader .status, body.noheader #locbox { display: n
 .todoitem .todobody { flex: 1 1 0; min-width: 0; }
 .todoitem .todoacts { flex: 1 1 100%; flex-direction: row; justify-content: flex-start; align-items: center; gap: 8px; flex-wrap: wrap; }
 .todoitem .fbcap { order: 0; }
+.todoitem .fbdel { margin-inline-start: auto; }
