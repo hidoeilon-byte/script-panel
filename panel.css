@@ -364,3 +364,5 @@ body.noheader #styles, body.noheader .status, body.noheader #locbox { display: n
 .todoitem .todoacts .fbdel { order: 4; margin-inline-start: 0; }
 .todoitem .todoacts .fbdots { order: 5; }
 .todoitem .todoacts .fbmeta { order: 6; width: 100%; }
+.fbleg { font: inherit; font-size: 12px; background: none; border: 1px solid transparent; border-radius: 6px; padding: 2px 5px; color: var(--ink); cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+.fbleg.on { border-color: var(--ink); }

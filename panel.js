@@ -655,7 +655,7 @@
       '<div class="chgctl"><div class="chgrow"><span class="chgstat">' + open + ' פתוחים מתוך ' + fbItems.length + '</span></div></div>';
     html += '<div class="fblegend"><span class="lbl">מקרא:</span> ' +
       [["לשנות", "#ef4444"], ["להוסיף", "#22c55e"], ["להסיר", "#f59e0b"], ["לבדוק", "#3b82f6"], ["כללי", "#a855f7"]].map(function (x) {
-        return '<span class="fbleg"><i style="background:' + x[1] + '"></i>' + x[0] + '</span>';
+        return '<button class="fbleg' + (flt.c === x[1] ? " on" : "") + '" data-c="' + x[1] + '"><i style="background:' + x[1] + '"></i>' + x[0] + '</button>';
       }).join("") + '</div>';
     html = fltBar() + html;
     html += '<div class="chglist">' + fbItems.map(function (t, k) {
@@ -1115,6 +1115,8 @@
         return;
       }
       if (e.target.closest("#fltcolbtn")) { colOpen = !colOpen; renderList(); return; }
+      var flg = e.target.closest(".fbleg");
+      if (flg) { var lc = flg.dataset.c; flt.c = flt.c === lc ? "" : lc; renderList(); return; }
       var fcolB = e.target.closest(".fltcol");
       if (fcolB) { flt.c = fcolB.dataset.c || ""; colOpen = false; renderList(); return; }
       if (view === "feedback" || (view === "todo" && e.target.closest("#colR"))) {
