@@ -232,13 +232,33 @@
           var reps = cs.items.map(function (c) {
             try { var r = c.replies; r.load("items/content"); return r; } catch (e) { return null; }
           });
+          var self = window.WordBridge;
+          var sig = cs.items.map(function (c) { return c.id; }).join(",");
+          var cmp = null;
+          if (!self._ord || self._ord.sig !== sig) {
+            var rg = cs.items.map(function (c) { return c.getRange(); });
+            cmp = [];
+            for (var i = 0; i < rg.length; i++) for (var j = i + 1; j < rg.length; j++) cmp.push([i, j, rg[i].compareLocationWith(rg[j])]);
+          }
           return ctx.sync().then(function () {
-            return cs.items.map(function (c, i) {
+            if (cmp) {
+              var before = cs.items.map(function () { return 0; });   // how many comments come before each one
+              cmp.forEach(function (x) {
+                var v = x[2].value;
+                if (v === "After" || v === "AdjacentAfter") before[x[0]]++; else before[x[1]]++;
+              });
+              var idx = cs.items.map(function (c, k) { return k; }).sort(function (a, b) { return before[a] - before[b] || a - b; });
+              self._ord = { sig: sig, ids: idx.map(function (k) { return cs.items[k].id; }) };
+            }
+            var out = cs.items.map(function (c, i) {
               var rr = reps[i] && reps[i].items ? reps[i].items.map(function (x) { return (x.content || "").trim(); }) : [];
               return { id: c.id, text: (c.content || "").trim(), resolved: !!c.resolved, author: c.authorName || "",
                        replies: rr,
                        where: (paras[i].text || "").trim().slice(0, 90), style: paras[i].style || "" };
             });
+            var pos = {};
+            self._ord.ids.forEach(function (id, k) { pos[id] = k; });
+            return out.sort(function (a, b) { return pos[a.id] - pos[b.id]; });
           });
         });
       });
@@ -333,9 +353,10 @@
               return h;
             });
             var basePara = c.getRange().paragraphs.getLast();
+            var changed = [];
             sug.ops.forEach(function (o, k) {
               var h = hits[k];
-              if (o.op === "replace") h.insertText(o.neu, "Replace");
+              if (o.op === "replace") changed.push(h.insertText(o.neu, "Replace"));
               else if (o.op === "delete") h.insertText("", "Replace");
               else if (o.op === "delpara") h.paragraphs.getFirst().delete();
               else {
@@ -344,12 +365,35 @@
                   base = base.insertParagraph(ln.text, "After");
                   base.style = ln.style;
                   base.font.highlightColor = null;
+                  changed.push(base.getRange("Content"));
                 });
               }
             });
             c.resolved = true;
+            var stamp = String(Date.now()).slice(-7);
+            changed.forEach(function (r, k) {
+              r.font.highlightColor = "#00FF00";
+              try { r.insertBookmark("zCardG" + stamp + "_" + k); } catch (e) {}
+            });
+            if (changed.length) changed[0].select("Select"); else basePara.select("Start");
             return ctx.sync();
           });
+        });
+      });
+    },
+
+    // remove the green marks the card left on its last change (bookmarks zCardG*)
+    clearCardMarks: function () {
+      if (!Office.context.requirements.isSetSupported("WordApi", "1.4")) return Promise.resolve();
+      return run(function (ctx) {
+        var names = ctx.document.body.getRange("Whole").getBookmarks(true, true);
+        return ctx.sync().then(function () {
+          names.value.filter(function (n) { return /^zCardG/.test(n); }).forEach(function (n) {
+            var r = ctx.document.getBookmarkRangeOrNullObject(n);
+            r.font.highlightColor = null;
+            ctx.document.deleteBookmark(n);
+          });
+          return ctx.sync();
         });
       });
     },

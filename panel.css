@@ -268,3 +268,4 @@ header { padding: 10px 10px 8px; border-bottom: 1px solid var(--line); }
 .sugsep { border-top: 1px dotted var(--line); margin: 4px 0; }
 .decide { display: flex; gap: 5px; flex-wrap: wrap; }
 .decide .lb { flex: 1; padding: 6px; }
+.donebox { border-color: #2e8b57; color: var(--ink); font-size: 12.5px; text-align: center; }
