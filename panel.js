@@ -165,7 +165,7 @@
   // three groups; each group has two sub-tabs
   var GROUPS = [
     { g: "script", t: "תסריט", subs: [["struct", "מבנה"]] },
-    { g: "notes", t: "הערות", subs: [["todo", "שלי"], ["feedback", "משוב"], ["answers", "תשובות"]] },
+    { g: "notes", t: "הערות", subs: [["todo", "שלי"], ["feedback", "משוב"]] },
     { g: "comparisons", t: "השוואות", subs: [["changes", "דראפטים"], ["compare", "סינופסיס"]] },
     { g: "tools", t: "כלים", subs: [["tools", "כלים"]] }
   ];
