@@ -583,7 +583,7 @@
   // colour per category Claude writes in brackets: set from the start, the user can still change it per item
   var FB_CAT_COLORS = { "לשנות": "#ef4444", "להוסיף": "#22c55e", "להסיר": "#f59e0b", "לבדוק": "#3b82f6", "כללי": "#a855f7" };
   function fbCatColor(t) {
-    var m = (t.text || "").match(/^\[([^\]]+)\]/);
+    var m = (t.text || "").match(/\[([^\]]+)\]/);
     return m && FB_CAT_COLORS[m[1].trim()] ? FB_CAT_COLORS[m[1].trim()] : "";
   }
   function renderFeedback(list) {
@@ -596,10 +596,11 @@
       '<div class="chgctl"><div class="chgrow"><span class="chgstat">' + open + ' פתוחים מתוך ' + fbItems.length + '</span></div></div>';
     html += '<div class="chglist">' + fbItems.map(function (t, k) {
       var cols = ["#ef4444", "#f59e0b", "#22c55e", "#3b82f6", "#a855f7"];
-      var dots = cols.map(function (c) { return '<button class="fbdot' + (t.c === c ? " on" : "") + '" data-i="' + k + '" data-c="' + c + '" style="background:' + c + '"></button>'; }).join("") +
-        '<button class="fbdot fbdot-none' + (!t.c ? " on" : "") + '" data-i="' + k + '" data-c=""></button>';
-      if (t.c === undefined) t.c = fbCatColor(t);
-      return '<div class="todoitem' + (t.done ? " done" : "") + '" data-i="' + k + '"' + (t.c ? ' style="border-inline-start:6px solid ' + t.c + '"' : "") + '>' +
+      var curc = t.cu !== undefined ? t.cu : fbCatColor(t);
+      var dots = cols.map(function (c) { return '<button class="fbdot' + (curc === c ? " on" : "") + '" data-i="' + k + '" data-c="' + c + '" style="background:' + c + '"></button>'; }).join("") +
+        '<button class="fbdot fbdot-none' + (!curc ? " on" : "") + '" data-i="' + k + '" data-c=""></button>';
+      var col = t.cu !== undefined ? t.cu : fbCatColor(t);
+      return '<div class="todoitem' + (t.done ? " done" : "") + '" data-i="' + k + '"' + (col ? ' style="border-inline-start:6px solid ' + col + '"' : "") + '>' +
         '<button class="todocheck fbcheck" data-i="' + k + '">' + (t.done ? "✓" : "") + '</button>' +
         '<div class="todobody"><div class="todotext">' + esc(t.text) + '</div>' +
         (t.sn ? '<button class="linkbtn fbscene" data-sn="' + t.sn + '">📍 סצנה ' + t.sn + '</button>' : '') + '</div>' +
@@ -1027,12 +1028,11 @@
           var fn = 0;
           ($("fbpaste").value || "").split("\n").forEach(function (ln) {
             var t = ln.trim(); if (!t) return;
-            var sm = t.match(/סצנה\s*(\d+)/);
+            t = t.replace(/^[-•*]\s*/, "");
+            var sm = t.match(/סצנ(?:ה|ות)\s*(\d+)/);
             var sn = sm ? +sm[1] : 0;
-            var clean = sm ? t.replace(/סצנה\s*\d+\s*[:\-–.]?\s*/, "").trim() : t;
-            var item = { text: clean || t, done: false, sn: sn };
-            item.c = fbCatColor(item);
-            fbItems.push(item); fn++;
+            var clean = sm ? t.replace(/^סצנ(?:ה|ות)[^:\[]*:\s*/, "").trim() : t;
+            fbItems.push({ text: clean || t, done: false, sn: sn }); fn++;
           });
           fbPaste = "";
           if (fn) saveFeedback();
@@ -1043,7 +1043,7 @@
         var fc = e.target.closest(".fbcheck");
         if (fc) { var fi = +fc.dataset.i; fbItems[fi].done = !fbItems[fi].done; saveFeedback(); renderFeedback(list); return; }
         var fdot = e.target.closest(".fbdot");
-        if (fdot) { var di = +fdot.dataset.i; fbItems[di].c = fdot.dataset.c || ""; saveFeedback(); renderFeedback(list); return; }
+        if (fdot) { var di = +fdot.dataset.i; fbItems[di].cu = fdot.dataset.c || ""; saveFeedback(); renderFeedback(list); return; }
         var fsc = e.target.closest(".fbscene");
         if (fsc) { W.goToScene(+fsc.dataset.sn - 1).catch(showErr); return; }
         var fdl = e.target.closest(".fbdel");
