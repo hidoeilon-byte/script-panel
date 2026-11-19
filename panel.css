@@ -373,3 +373,5 @@ body.noheader #styles, body.noheader .status, body.noheader #locbox { display: n
 .todoitem .todoacts .fbdel { order: 0; margin-inline-start: 0; }
 .fbmeta input.fbch { font: inherit; font-size: 12px; padding: 3px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); flex: 1 1 160px; min-width: 0; }
 .fbcat { font-size: 11.5px; padding: 1px 7px; border-radius: 10px; background: var(--card); border: 1px solid var(--line); color: var(--ink); white-space: nowrap; }
+.fbcatbtn { font: inherit; font-size: 12px; padding: 3px 9px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; }
+.fbcatbtn.on { background: var(--on); color: var(--on-ink); border-color: var(--on); }

@@ -667,8 +667,8 @@
       if (!fltOk(t, true)) return "";
       var cols = STAGES.map(function (x) { return STAGE_COLORS[x]; });
       var curc = stageColorOf(t);
-      var dots = fbPick === k ? STAGES.map(function (x, xi) { var c = cols[xi]; return '<button class="fbdot' + (curc === c ? " on" : "") + '" data-i="' + k + '" data-s="' + x + '" data-c="' + c + '" style="background:' + c + '" title="' + x + '"></button>'; }).join("") +
-        '<button class="fbdot fbdot-none' + (!curc ? " on" : "") + '" data-i="' + k + '" data-c=""></button>' : '';
+      var catNow = fbCatName(t);
+      var dots = fbPick === k ? ["לשנות", "להוסיף", "להסיר", "לבדוק", "כללי"].map(function (c) { return '<button class="fbcatbtn' + (catNow === c ? " on" : "") + '" data-i="' + k + '" data-cat="' + c + '">' + c + '</button>'; }).join("") : '';
       var curBtn = '<button class="fbcur" data-i="' + k + '" title="שנה צבע" style="background:' + (curc || "transparent") + '"></button>';
       var col = stageColorOf(t);
       return '<div class="todoitem' + (t.done ? " done" : "") + '" data-i="' + k + '"' + (col ? ' style="border-inline-start:6px solid ' + col + '"' : "") + '>' +
@@ -1159,6 +1159,8 @@
         var fcur = e.target.closest(".fbcur");
         if (fcur) { var ci2 = +fcur.dataset.i; fbPick = fbPick === ci2 ? -1 : ci2; renderFeedback(fl); return; }
         var fdot = e.target.closest(".fbdot");
+        var fcat = e.target.closest(".fbcatbtn");
+        if (fcat) { var dci = +fcat.dataset.i; fbItems[dci].cat = fcat.dataset.cat || ""; fbPick = -1; saveFeedback(); renderFeedback(fl); return; }
         if (fdot) { var di = +fdot.dataset.i; fbItems[di].pt = fdot.dataset.s || ""; fbPick = -1; saveFeedback(); renderFeedback(fl); return; }
         var fsc = e.target.closest(".fbscene");
         if (fsc) { W.goToScene(+fsc.dataset.sn - 1).catch(showErr); return; }
