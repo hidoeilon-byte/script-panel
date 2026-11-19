@@ -705,7 +705,7 @@
       html += '<details class="sumimp"><summary>תקצירים מ-Claude</summary>' +
         '<div class="sumbody"><button class="lb on" id="sumcopy">העתק בקשה: תקציר לכל סצנה</button> <span class="chgstat" id="sumcopied"></span>' +
         '<textarea id="sumpaste" rows="4" placeholder="הדבק כאן את רשימת Claude, שורה לכל סצנה: סצנה 1: ..."></textarea>' +
-        '<button class="lb" id="sumapply">הכנס תקצירים לסצנות שריקות</button> <span class="chgstat" id="sumres"></span></div></details>';
+        '<button class="lb" id="sumapply">הכנס תקצירים לסצנות ריקות</button> <span class="chgstat" id="sumres"></span></div></details>';
     }
     if (view === "struct" && structMode === "stage") {
       var byStage = {}; STAGES.forEach(function (x) { byStage[x] = []; }); byStage[""] = [];
