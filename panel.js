@@ -670,7 +670,7 @@
         '<div class="todobody"><textarea class="fbta" data-i="' + k + '" rows="2">' + esc(String(t.text || "").replace(/^\s*\[[^\]]+\]\s*/, "")) + '</textarea>' +
         (fbMeta === k ? '<div class="fbmeta"><select class="fbch" data-i="' + k + '"><option value="">דמות</option>' + fbCharOpts(t.ch) + '</select>' +
         '<select class="fbpt" data-i="' + k + '"><option value="">חלק</option>' + STAGES.map(function (x) { return '<option value="' + x + '"' + ((t.pt || fltStageOf(t)) === x ? " selected" : "") + '>' + x + '</option>'; }).join("") + '</select></div>' : '') +
-        '<div class="todoacts">' + (t.sn ? '<button class="linkbtn fbscene" data-sn="' + t.sn + '">📍 סצנה ' + t.sn + '</button>' : '') + '</div>' + '<div class="fbcap" data-i="' + k + '">' + esc([(t.ch || "דמות?"), (t.pt || fltStageOf(t) || "חלק?")].join(" · ")) + '</div>' + curBtn + '<div class="fbdots">' + dots + '</div><button class="linkbtn fbdel" data-i="' + k + '">מחק</button></div></div>';
+        '</div><div class="todoacts">' + (t.sn ? '<button class="linkbtn fbscene" data-sn="' + t.sn + '">📍 סצנה ' + t.sn + '</button>' : '') + '<div class="fbcap" data-i="' + k + '">' + esc([(t.ch || "דמות?"), (t.pt || fltStageOf(t) || "חלק?")].join(" · ")) + '</div>' + curBtn + '<div class="fbdots">' + dots + '</div><button class="linkbtn fbdel" data-i="' + k + '">מחק</button></div></div>';
     }).join("") + '</div>';
     if (!fbItems.length) html += '<div class="empty">עוד אין פריטים מהשיחה עם המרצה.</div>';
     html = fltBar() + html;
