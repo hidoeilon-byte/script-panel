@@ -31,7 +31,10 @@
   var editing = -1;
   var view = "heads";   // heads | struct
   var lastSub = { script: "struct", notes: "todo", comparisons: "changes", tools: "tools" };
-  var STAGES = ["אירוע מחולל", "אקספוזיציה", "נקודת מפנה", "נקודת מפנה שנייה", "נקודת שיא", "התרה"];
+  var STAGES = ["מחולל", "אקפוזיציה", "מפנה 1", "מפנה 2", "שיא", "התרה"];
+  // older names of the parts map to the short ones, so nothing saved before breaks
+  var STAGE_OLD = { "אירוע מחולל": "מחולל", "אקספוזיציה": "אקפוזיציה", "נקודת מפנה": "מפנה 1", "נקודת מפנה שנייה": "מפנה 2", "נקודת שיא": "שיא" };
+  function stNorm(v) { return STAGE_OLD[v] || v || ""; }
   var stageOpen = {};   // which parts of the structure are open (click the part header)
   var dragI = -1, sumEdit = -1;   // scene whose summary is being edited inside the parts   // remembered sub-tab per group
   var showSyn = true;
@@ -595,12 +598,12 @@
   }
   function fltStageOf(t) {
     var sc = t.sn ? scenes[t.sn - 1] : (t.scene ? scenes.filter(function (x) { return x.h === t.scene; })[0] : null);
-    return sc ? (sc.st || "") : "";
+    return sc ? stNorm(sc.st) : "";
   }
   function fltOk(t, isFb) {
     if (flt.c) { var cc = fltColorOf(t, isFb) || "none"; if (cc !== flt.c) return false; }
     if (flt.ch) { var chOk = (isFb && t.ch) ? t.ch.split(",").map(function (x) { return x.trim(); }).indexOf(flt.ch) >= 0 : (t.text || "").indexOf(flt.ch) >= 0; if (!chOk) return false; }
-    if (flt.st) { var ss = (isFb && t.pt) ? t.pt : (fltStageOf(t) || "לא שויך"); if (ss !== flt.st) return false; }
+    if (flt.st) { var ss = (isFb && t.pt) ? stNorm(t.pt) : (fltStageOf(t) || "לא שויך"); if (ss !== flt.st) return false; }
     return true;
   }
   function loadCharNames() {
@@ -635,9 +638,9 @@
   var fbItems = null, fbPaste = "", fbPick = -1, fbEdit = -1, todoPick = -1, fbMeta = -1;
   // colour per category Claude writes in brackets: set from the start, the user can still change it per item
   var FB_CAT_COLORS = { "לשנות": "#ef4444", "להוסיף": "#22c55e", "להסיר": "#f59e0b", "לבדוק": "#3b82f6", "כללי": "#a855f7" };
-  var STAGE_COLORS = { "אירוע מחולל": "#ef4444", "אקספוזיציה": "#f59e0b", "נקודת מפנה": "#22c55e", "נקודת מפנה שנייה": "#3b82f6", "נקודת שיא": "#a855f7", "התרה": "#64748b" };
+  var STAGE_COLORS = { "מחולל": "#ef4444", "אקפוזיציה": "#f59e0b", "מפנה 1": "#22c55e", "מפנה 2": "#3b82f6", "שיא": "#a855f7", "התרה": "#64748b" };
   function stageColorOf(t) {
-    var st = t.pt || fltStageOf(t);
+    var st = stNorm(t.pt) || fltStageOf(t);
     return STAGE_COLORS[st] || "";
   }
   function fbCatName(t) {
@@ -675,7 +678,7 @@
         '<button class="todocheck fbcheck" data-i="' + k + '">' + (t.done ? "✓" : "") + '</button>' +
         '<div class="todobody"><textarea class="fbta" data-i="' + k + '" rows="2">' + esc(String(t.text || "").replace(/^\s*\[[^\]]+\]\s*/, "")) + '</textarea>' +
         (fbMeta === k ? '<div class="fbmeta"><input class="fbch" list="charlist" data-i="' + k + '" value="' + esc(t.ch || "") + '" placeholder="דמות, דמות">' +
-        '<select class="fbpt" data-i="' + k + '"><option value="">חלק</option>' + STAGES.map(function (x) { return '<option value="' + x + '"' + ((t.pt || fltStageOf(t)) === x ? " selected" : "") + '>' + x + '</option>'; }).join("") + '</select></div>' : '') +
+        '<select class="fbpt" data-i="' + k + '"><option value="">חלק</option>' + STAGES.map(function (x) { return '<option value="' + x + '"' + (stNorm(t.pt || fltStageOf(t)) === x ? " selected" : "") + '>' + x + '</option>'; }).join("") + '</select></div>' : '') +
         '</div><div class="todoacts">' + (t.sn ? '<button class="linkbtn fbscene" data-sn="' + t.sn + '">📍 סצנה ' + t.sn + '</button>' : '') + '' + (fbCatName(t) ? '<span class="fbcat">' + esc(fbCatName(t)) + '</span>' : '') + '<div class="fbcap" data-i="' + k + '">' + esc([(t.ch || "דמות?"), (t.pt || fltStageOf(t) || "חלק?")].join(" · ")) + '</div>' + curBtn + '<div class="fbdots">' + dots + '</div><button class="linkbtn fbdel" data-i="' + k + '">מחק</button></div></div>';
     }).join("") + '</div>';
     if (!fbItems.length) html += '<div class="empty">עוד אין פריטים מהשיחה עם המרצה.</div>';
@@ -822,7 +825,7 @@
     }
     if (view === "struct") {
       var byStage = {}; STAGES.forEach(function (x) { byStage[x] = []; }); byStage[""] = [];
-      scenes.forEach(function (sc, i) { (byStage[sc.st && STAGES.indexOf(sc.st) >= 0 ? sc.st : ""]).push(i); });
+      scenes.forEach(function (sc, i) { var sn2 = stNorm(sc.st); (byStage[STAGES.indexOf(sn2) >= 0 ? sn2 : ""]).push(i); });
       var allOpen = STAGES.every(function (x) { return stageOpen[x]; });
       html += '<div class="partsbar"><span>חלקי המבנה</span><button class="linkbtn" id="partsall">' + (allOpen ? "כווץ הכול" : "פתח הכול") + '</button></div>';
       STAGES.concat([""]).forEach(function (stg) {
@@ -1144,7 +1147,7 @@
             var catm = (clean || t).match(/\[([^\]]+)\]/);
             var cat = catm ? catm[1].trim() : "";
             var body = (clean || t).replace(/\[[^\]]+\]\s*/, "").trim();
-            fbItems.push({ text: body || clean || t, done: false, sn: sn, cat: cat, ch: ch, pt: STAGES.indexOf(pt) >= 0 ? pt : "" }); fn++;
+            fbItems.push({ text: body || clean || t, done: false, sn: sn, cat: cat, ch: ch, pt: STAGES.indexOf(stNorm(pt)) >= 0 ? stNorm(pt) : "" }); fn++;
           });
           fbPaste = "";
           if (fn) saveFeedback();
