@@ -683,7 +683,7 @@
         '<div class="todobody"><textarea class="fbta" data-i="' + k + '" rows="2">' + esc(String(t.text || "").replace(/^\s*\[[^\]]+\]\s*/, "")) + '</textarea>' +
         (fbMeta === k ? '<div class="fbmeta"><input class="fbch" list="charlist" data-i="' + k + '" value="' + esc(t.ch || "") + '" placeholder="דמות, דמות">' +
         '</div>' : '') +
-        '</div><div class="todoacts">' + (t.sn ? '<button class="linkbtn fbscene" data-sn="' + t.sn + '">📍 סצנה ' + t.sn + '</button>' : '') + '' + '<div class="fbcap" data-i="' + k + '">' + esc([(t.ch || "דמות?"), (t.pt || fltStageOf(t) || "חלק?")].join(" · ")) + '</div>' + curBtn + '<div class="fbdots">' + dots + '</div><button class="linkbtn fbdel" data-i="' + k + '">מחק</button></div></div>';
+        '</div><div class="todoacts">' + (t.sn ? '<button class="linkbtn fbscene" data-sn="' + t.sn + '">📍 סצנה ' + t.sn + '</button>' : '') + '' + '<div class="fbcap" data-i="' + k + '">' + esc([t.ch, (t.pt || fltStageOf(t))].filter(Boolean).join(" · ")) + '</div>' + curBtn + '<div class="fbdots">' + dots + '</div><button class="linkbtn fbdel" data-i="' + k + '">מחק</button></div></div>';
     }).join("") + '</div>';
     if (!fbItems.length) html += '<div class="empty">עוד אין פריטים מהשיחה עם המרצה.</div>';
     list.innerHTML = html;
@@ -709,7 +709,7 @@
         (todoLinking === String(k) ? '<div class="todolink">בחר כותרת סצנה בתסריט, ואז לחץ "קשר כאן"<br><button class="lb on" id="todolinkok" data-i="' + k + '">קשר לסצנה הנוכחית</button></div>' : '') +
         (todoMeta === k ? '<div class="fbmeta"><input class="todoch" data-i="' + k + '" value="' + esc(t.ch || "") + '" placeholder="דמות, דמות" list="charlist"></div>' : '') +
         '</div><div class="todoacts"><button class="fbcur todocur" data-i="' + k + '" title="שנה חלק" style="background:' + (stageColorOf(t) || "transparent") + '"></button>' +
-        '<span class="fbcap todocap" data-i="' + k + '">' + esc([(t.ch || "דמות?"), (stNorm(t.pt) || "חלק?")].join(" · ")) + '</span>' +
+        '<span class="fbcap todocap" data-i="' + k + '">' + esc([t.ch, stNorm(t.pt)].filter(Boolean).join(" · ")) + '</span>' +
         (todoPick === k ? '<div class="fbdots">' + STAGES.map(function (x) { var c = STAGE_COLORS[x]; return '<button class="fbdot todocol' + (stageColorOf(t) === c ? " on" : "") + '" data-i="' + k + '" data-s="' + x + '" title="' + x + '" style="background:' + c + '"></button>'; }).join("") + '</div>' : '') +
         '<button class="linkbtn askclaude-todo" data-i="' + k + '">שלח ל-Claude</button><button class="linkbtn todolinkbtn" data-i="' + k + '">קשר</button>' +
         '<button class="linkbtn tododel" data-i="' + k + '">מחק</button></div></div>';
