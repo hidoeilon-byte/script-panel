@@ -533,6 +533,12 @@
     },
 
     // personal list, stored in the document's settings (like the scene data)
+    loadAnswers: function () {
+      try { return Office.context.document.settings.get("scenePanel.answers") || []; } catch (e) { return []; }
+    },
+    saveAnswers: function (list) {
+      try { var st = Office.context.document.settings; st.set("scenePanel.answers", list); st.saveAsync(); } catch (e) {}
+    },
     loadFeedback: function () {
       try { return Office.context.document.settings.get("scenePanel.feedback") || []; } catch (e) { return []; }
     },

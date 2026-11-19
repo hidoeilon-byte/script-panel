@@ -165,12 +165,12 @@
   // three groups; each group has two sub-tabs
   var GROUPS = [
     { g: "script", t: "תסריט", subs: [["struct", "מבנה"]] },
-    { g: "notes", t: "הערות", subs: [["todo", "שלי"], ["feedback", "משוב"]] },
+    { g: "notes", t: "הערות", subs: [["todo", "שלי"], ["feedback", "משוב"], ["answers", "תשובות"]] },
     { g: "comparisons", t: "השוואות", subs: [["changes", "דראפטים"], ["compare", "סינופסיס"]] },
     { g: "tools", t: "כלים", subs: [["tools", "כלים"]] }
   ];
   function groupOf(v) {
-    return v === "struct" || v === "heads" ? "script" : v === "notes" || v === "todo" || v === "feedback" ? "notes" :
+    return v === "struct" || v === "heads" ? "script" : v === "notes" || v === "todo" || v === "feedback" || v === "answers" ? "notes" :
       v === "changes" || v === "compare" ? "comparisons" : "tools";
   }
   function renderBar() {
@@ -641,6 +641,23 @@
       '</div>';
   }
 
+  // ---------- תשובות: answers from Claude kept in the document, to come back to later
+  var ansItems = null, ansOpen = -1, ansTitle = "", ansBody = "";
+  function saveAnswers() { W.saveAnswers(ansItems); }
+  function renderAnswers(list) {
+    if (!ansItems) ansItems = W.loadAnswers() || [];
+    var html = '<div class="ansadd"><input id="ansTitle" type="text" placeholder="כותרת קצרה" value="' + esc(ansTitle) + '">' +
+      '<textarea id="ansBody" rows="4" placeholder="הדבק כאן את התשובה של Claude">' + esc(ansBody) + '</textarea>' +
+      '<button class="lb on" id="ansAdd">שמור תשובה</button></div>';
+    html += '<div class="chglist">' + ansItems.map(function (a, k) {
+      return '<div class="todoitem ansrow" data-i="' + k + '">' +
+        '<div class="todobody"><div class="todotext ansopen" data-i="' + k + '">' + esc(a.title || "(בלי כותרת)") + '</div>' +
+        (ansOpen === k ? '<div class="ansbody">' + esc(a.body || "") + '</div>' : '') + '</div>' +
+        '<div class="todoacts"><button class="linkbtn ansdel" data-i="' + k + '">מחק</button></div></div>';
+    }).join("") + '</div>';
+    if (!ansItems.length) html += '<div class="empty">עוד אין תשובות שמורות.</div>';
+    list.innerHTML = html;
+  }
   // ---------- משוב: a list from a conversation with the lecturer (own tab, own storage)
   var fbItems = null, fbPaste = "", fbPick = -1, fbEdit = -1, todoPick = -1, fbMeta = -1, todoMeta = -1;
   // colour per category Claude writes in brackets: set from the start, the user can still change it per item
@@ -814,6 +831,7 @@
       renderNotes($("cmpN")); renderTools($("cmpT"), "השוואה חכמה"); return;
     }
     if (view === "feedback") { list.className = "view-notes"; renderFeedback(list); return; }
+    if (view === "answers") { list.className = "view-notes"; renderAnswers(list); return; }
     list.className = view === "struct" ? "view-struct" : "";
     if (!scenes.length) {
       list.innerHTML = '<div class="empty">אין עדיין סצנות.<br>כותרת סצנה חדשה: Tab עד שמגיעים לסצנה</div>';
@@ -883,7 +901,7 @@
     document.body.classList.toggle("noheader", view === "notes" || view === "compare" || view === "todo" || view === "feedback");
     renderBar();
     renderPlotBar();
-    var hideBars = view === "changes" || view === "tools" || view === "compare" || view === "notes" || view === "todo" || view === "feedback";
+    var hideBars = view === "changes" || view === "tools" || view === "compare" || view === "notes" || view === "todo" || view === "feedback" || view === "answers";
     $("markbar").hidden = hideBars;
     if (hideBars) $("plotbar").hidden = true;
     renderList();
@@ -1144,6 +1162,19 @@
       if (flg) { var lc = flg.dataset.c; flt.c = flt.c === lc ? "" : lc; renderList(); return; }
       var fcolB = e.target.closest(".fltcol");
       if (fcolB) { flt.c = fcolB.dataset.c || ""; colOpen = false; renderList(); return; }
+      if (view === "answers") {
+        if (e.target.closest("#ansAdd")) {
+          var at = ($("ansTitle").value || "").trim(), ab = ($("ansBody").value || "").trim();
+          if (!ab) return;
+          ansItems.push({ title: at || ab.slice(0, 40), body: ab, date: new Date().toISOString().slice(0, 10) });
+          ansTitle = ""; ansBody = ""; ansOpen = -1; saveAnswers(); renderList(); return;
+        }
+        var ad = e.target.closest(".ansdel");
+        if (ad) { ansItems.splice(+ad.dataset.i, 1); saveAnswers(); renderList(); return; }
+        var ao = e.target.closest(".ansopen");
+        if (ao) { var aoi = +ao.dataset.i; ansOpen = ansOpen === aoi ? -1 : aoi; renderList(); return; }
+        return;
+      }
       if (view === "feedback" || (view === "todo" && e.target.closest("#colR"))) {
         var fl = $("colR") || list;
         if (e.target.closest("#fbopen")) {
