@@ -418,7 +418,7 @@
   var noteSel = "";
   var showDone = false;
   var walkOpen = false;
-  var cmtShow = lsGet("cmtShow", "") === "1";
+  var cmtShow = false;   // the macro hides comments every time the script opens
   var synNoteCount = 0;
   function isSynNote(t) { t = (t || "").trim(); return /^סינופסיס \d+:/.test(t) || /^תסריט:/.test(t); }
   function openNotes() { return notes ? notes.filter(function (n) { return !n.resolved; }).length : 0; }
@@ -840,7 +840,7 @@
         }
         if (e.target.closest("#cardrestart")) { roundDone = false; var co1 = openCmp(); if (co1.length) selectNote(co1[0].id, true); return; }
         if (e.target.closest("#cardlist")) { roundDone = false; cardMode = false; cardEdit = false; markOff(); renderList(); return; }
-        if (e.target.closest("#cmtview")) { cmtShow = !cmtShow; lsSet("cmtShow", cmtShow ? "1" : ""); renderList(); W.sendRequest("comments", cmtShow ? "show" : "hide").catch(showErr); return; }
+        if (e.target.closest("#cmtview")) { cmtShow = !cmtShow; renderList(); W.sendRequest("comments", cmtShow ? "show" : "hide").catch(showErr); return; }
         if (e.target.closest("#walkshow")) { walkOpen = walkOpen === "walk" ? false : "walk"; renderList(); return; }
         if (e.target.closest("#prepshow")) { walkOpen = walkOpen === "prep" ? false : "prep"; renderList(); return; }
         if (e.target.closest("#walkcopy")) { copyFrom("walktext", "walkcopied"); return; }
