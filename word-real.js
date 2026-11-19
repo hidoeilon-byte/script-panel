@@ -246,6 +246,7 @@
                        where: (paras[i].text || "").trim().slice(0, 90), style: paras[i].style || "" };
             });
             if (!self._ord || self._ord.sig !== sig) return out;
+            out.forEach(function (x) { x.scene = self._ord.scene ? self._ord.scene[x.id] || 0 : 0; });
             var pos = {};
             self._ord.ids.forEach(function (id, k) { pos[id] = k; });
             return out.sort(function (a, b) { return pos[a.id] - pos[b.id]; });
@@ -263,14 +264,25 @@
           var rg = cs.items.map(function (c) { return c.getRange(); });
           var cmp = [];
           for (var i = 0; i < rg.length; i++) for (var j = i + 1; j < rg.length; j++) cmp.push([i, j, rg[i].compareLocationWith(rg[j])]);
+          var ps = ctx.document.body.paragraphs;
+          ps.load("items/style");
           return ctx.sync().then(function () {
+            // scene of each comment = how many scene headings come before it
+            var heads = ps.items.filter(function (p) { return p.style === SCENE; });
+            var hc = rg.map(function (r) { return heads.map(function (h) { return h.getRange("Start").compareLocationWith(r); }); });
+            return ctx.sync().then(function () { return hc; });
+          }).then(function (hc) {
             var before = cs.items.map(function () { return 0; });
             cmp.forEach(function (x) {
               var v = x[2].value;
               if (v === "After" || v === "AdjacentAfter") before[x[0]]++; else before[x[1]]++;
             });
             var idx = cs.items.map(function (c, k) { return k; }).sort(function (a, b) { return before[a] - before[b] || a - b; });
-            self._ord = { sig: cs.items.map(function (c) { return c.id; }).join(","), ids: idx.map(function (k) { return cs.items[k].id; }) };
+            var scene = {};
+            cs.items.forEach(function (c, k) {
+              scene[c.id] = hc[k].filter(function (x) { var v = x.value; return v === "Before" || v === "AdjacentBefore" || v === "InsideStart" || v === "Equal"; }).length;
+            });
+            self._ord = { sig: cs.items.map(function (c) { return c.id; }).join(","), ids: idx.map(function (k) { return cs.items[k].id; }), scene: scene };
           });
         });
       });

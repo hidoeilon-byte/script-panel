@@ -271,3 +271,5 @@ header { padding: 10px 10px 8px; border-bottom: 1px solid var(--line); }
 .donebox { border-color: #2e8b57; color: var(--ink); font-size: 12.5px; text-align: center; }
 .findable { cursor: pointer; border-radius: 4px; }
 .findable:hover { background: rgba(64, 224, 208, .25); }
+.warnjump { cursor: pointer; }
+.warnjump:hover { text-decoration: underline; }
