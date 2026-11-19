@@ -30,7 +30,7 @@
   var curScene = -1;
   var editing = -1;
   var view = "heads";   // heads | struct
-  var lastSub = { script: "struct", notes: "notes", comparisons: "changes", tools: "tools" };
+  var lastSub = { script: "struct", notes: "todo", comparisons: "changes", tools: "tools" };
   var STAGES = ["אירוע מחולל", "אקספוזיציה", "נקודת מפנה", "נקודת מפנה שנייה", "נקודת שיא", "התרה"];
   var stageOpen = {};   // which parts of the structure are open (click the part header)
   var dragI = -1, sumEdit = -1;   // scene whose summary is being edited inside the parts   // remembered sub-tab per group
@@ -50,6 +50,7 @@
 
   showSyn = lsGet("showSyn", "1") !== "0";
   view = lsGet("view", "struct");
+  if (view === "notes") view = "compare";
   if (view === "heads" || view === "feedback") view = "struct";
   lastSub[groupOf(view)] = view;
   if (lsGet("compact", "") === "1") document.body.classList.add("compact");
@@ -161,7 +162,7 @@
   // three groups; each group has two sub-tabs
   var GROUPS = [
     { g: "script", t: "תסריט", subs: [["struct", "מבנה"]] },
-    { g: "notes", t: "הערות", subs: [["notes", "הערות"], ["todo", "שלי"], ["feedback", "משוב"]] },
+    { g: "notes", t: "הערות", subs: [["todo", "שלי"], ["feedback", "משוב"]] },
     { g: "comparisons", t: "השוואות", subs: [["changes", "דראפטים"], ["compare", "סינופסיס"]] },
     { g: "tools", t: "כלים", subs: [["tools", "כלים"]] }
   ];
@@ -471,7 +472,7 @@
       });
       var changed = JSON.stringify(n) !== JSON.stringify(notes);
       notes = n;
-      if (changed) { renderBar(); if (view === "notes" && !cardEdit && !instrOpen) renderList(); }
+      if (changed) { renderBar(); if ((view === "notes" || view === "compare") && !cardEdit && !instrOpen) renderList(); }
     }).catch(function () {});
   }
   function promptBox() {
@@ -730,9 +731,13 @@
     var list = $("scenes");
     if (view === "changes") { list.className = "view-changes"; renderChanges(list); return; }
     if (view === "tools") { list.className = "view-tools"; renderTools(list); return; }
-    if (view === "notes") { list.className = "view-notes"; renderNotes(list); return; }
+    if (view === "notes") { view = "compare"; lsSet("view", view); renderList(); return; }
     if (view === "todo") { list.className = "view-notes"; renderTodo(list); return; }
-    if (view === "compare") { list.className = "view-tools"; renderTools(list, "השוואה חכמה"); return; }
+    if (view === "compare") {
+      list.className = "view-notes";
+      list.innerHTML = '<div id="cmpT"></div><div id="cmpN"></div>';
+      renderTools($("cmpT"), "השוואה חכמה"); renderNotes($("cmpN")); return;
+    }
     if (view === "feedback") { list.className = "view-notes"; renderFeedback(list); return; }
     list.className = view === "struct" ? "view-struct" : "";
     if (!scenes.length) {
@@ -866,18 +871,18 @@
         var grp = GROUPS.filter(function (x) { return x.g === gg.dataset.group; })[0];
         var last = lastSub[grp.g];
         var pick = grp.subs.filter(function (sv) { return sv[0] === last; }).length ? last : grp.subs[0][0];
-        if (view === "notes" && pick !== "notes") { markOff(); cardEdit = false; cardMode = false; }
+        if ((view === "notes" || view === "compare") && pick !== "compare") { markOff(); cardEdit = false; cardMode = false; }
         view = pick; lsSet("view", view); editing = -1; render();
         if (view === "changes") { refreshChanges().then(function () { if (!chg || !chg.last) W.sendRequest && W.sendRequest("info", ""); }); }
-        if (view === "notes") { refreshNotes(); }
+        if (view === "notes" || view === "compare") { refreshNotes(); }
         return;
       }
       var v = e.target.closest("[data-view]");
       if (v) {
-        if (view === "notes" && v.dataset.view !== "notes") { markOff(); cardEdit = false; cardMode = false; }
+        if ((view === "notes" || view === "compare") && v.dataset.view !== "compare") { markOff(); cardEdit = false; cardMode = false; }
         view = v.dataset.view; lastSub[groupOf(view)] = view; lsSet("view", view); editing = -1; render();
         if (view === "changes") { refreshChanges().then(function () { if (!chg || !chg.last) W.sendRequest && W.sendRequest("info", ""); }); }
-        if (view === "notes") { refreshNotes(); }
+        if (view === "notes" || view === "compare") { refreshNotes(); }
         return;
       }
       if (e.target.closest("#refresh")) { sig = ""; refreshScenes(true).then(refreshCursor); return; }
@@ -1085,7 +1090,7 @@
         if (tsc) { W.gotoHeading(todos[+tsc.dataset.i].scene).catch(showErr); return; }
         return;
       }
-      if (view === "notes") {
+      if ((view === "notes" || view === "compare") && !e.target.closest(".toolbtn, #smartcopy")) {
         if (e.target.id === "notedone") { showDone = e.target.checked; renderList(); return; }
         if (e.target.closest("#instrsend")) { walkOpen = walkOpen === "instr" ? false : "instr"; renderList(); return; }
         if (e.target.closest("#instropen")) { instrOpen = true; cardMsg = ""; renderList(); var it = $("instrtext"); if (it) it.focus(); return; }
@@ -1502,7 +1507,7 @@
       if (document.hidden || editing >= 0) return;
       refreshNotes();
       if (view === "changes") { refreshChanges(); return; }
-      if (view === "notes") return;
+      if (view === "notes" || view === "compare") return;
       refreshScenes();
     }, 3000);
     if (view === "changes") refreshChanges();
