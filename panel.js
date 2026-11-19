@@ -637,7 +637,7 @@
     html += '<div class="chglist">' + todos.map(function (t, k) {
       return '<div class="todoitem' + (t.done ? " done" : "") + '" data-i="' + k + '">' +
         '<button class="todocheck" data-i="' + k + '">' + (t.done ? "✓" : "") + '</button>' +
-        '<div class="todobody">' + (fbEdit === k ? '<textarea class="fbta" data-i="' + k + '" rows="3">' + esc(t.text) + '</textarea>' : '<div class="todotext fbtext" data-i="' + k + '">' + esc(t.text) + '</div>') +
+        '<div class="todobody"><textarea class="fbta" data-i="' + k + '" rows="2">' + esc(t.text) + '</textarea>' +
         (t.scene ? '<button class="linkbtn todoscene" data-i="' + k + '">📍 ' + esc(t.scene) + '</button>' : '') +
         (todoLinking === String(k) ? '<div class="todolink">בחר כותרת סצנה בתסריט, ואז לחץ "קשר כאן"<br><button class="lb on" id="todolinkok" data-i="' + k + '">קשר לסצנה הנוכחית</button></div>' : '') +
         '</div><div class="todoacts"><button class="linkbtn askclaude-todo" data-i="' + k + '">שלח ל-Claude</button><button class="linkbtn todolinkbtn" data-i="' + k + '">קשר</button>' +
@@ -977,12 +977,10 @@
       if (scenes[i] && scenes[i].s !== e.target.value) { scenes[i].s = e.target.value.replace(/\n/g, " ").trim(); persist(); }
       sumEdit = -1; renderList();
     });
-  list.addEventListener("focusout", function (e) {
+  list.addEventListener("change", function (e) {
       if (!e.target.classList || !e.target.classList.contains("fbta")) return;
       var fi2 = +e.target.dataset.i, nv = e.target.value.trim();
-      fbEdit = -1;
-      if (fbItems[fi2] && nv && nv !== fbItems[fi2].text) { fbItems[fi2].text = nv; saveFeedback(); }
-      renderFeedback($("colR") || $("scenes"));
+      if (fbItems && fbItems[fi2] && nv && nv !== fbItems[fi2].text) { fbItems[fi2].text = nv; saveFeedback(); }
   });
   list.addEventListener("keydown", function (e) {
       if (e.target.classList && e.target.classList.contains("fbta") && e.key === "Enter" && !e.shiftKey) { e.preventDefault(); e.target.blur(); return; }
@@ -1070,8 +1068,6 @@
         }
         var fc = e.target.closest(".fbcheck");
         if (fc) { var fi = +fc.dataset.i; fbItems[fi].done = !fbItems[fi].done; saveFeedback(); renderFeedback(fl); return; }
-        var ftx = e.target.closest(".fbtext");
-        if (ftx) { fbEdit = +ftx.dataset.i; renderFeedback(fl); var fta = document.querySelector('.fbta[data-i="' + fbEdit + '"]'); if (fta) fta.focus(); return; }
         var fcur = e.target.closest(".fbcur");
         if (fcur) { var ci2 = +fcur.dataset.i; fbPick = fbPick === ci2 ? -1 : ci2; renderFeedback(fl); return; }
         var fdot = e.target.closest(".fbdot");

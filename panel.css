@@ -332,3 +332,5 @@ body.compact #bar .cnt { display: none; }
 .twocols .sumimp summary { font-weight: 600; }
 .fbtext { cursor: text; }
 .fbta { width: 100%; box-sizing: border-box; font: inherit; font-size: 13px; line-height: 1.45; border: 1px solid var(--accent); border-radius: 5px; background: var(--bg); color: var(--ink); padding: 4px; }
+.fbta { width: 100%; box-sizing: border-box; font: inherit; font-size: 13px; line-height: 1.45; border: 1px solid transparent; border-radius: 5px; background: transparent; color: var(--ink); padding: 3px 4px; resize: vertical; }
+.fbta:focus { border-color: var(--accent); background: var(--bg); }
