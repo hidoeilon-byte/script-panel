@@ -377,3 +377,6 @@ body.noheader #styles, body.noheader .status, body.noheader #locbox { display: n
 .fbcatbtn.on { background: var(--on); color: var(--on-ink); border-color: var(--on); }
 .todoch { font: inherit; font-size: 12px; padding: 3px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); flex: 1 1 160px; min-width: 0; }
 .todocap { cursor: pointer; }
+.todoitem { position: relative; }
+.askicon { position: absolute; top: 4px; left: 4px; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--line); background: var(--card); color: #d97757; cursor: pointer; font-size: 13px; line-height: 1; padding: 0; display: flex; align-items: center; justify-content: center; }
+.askicon:hover { border-color: #d97757; }

@@ -679,6 +679,7 @@
       var curBtn = '<button class="fbcur" data-i="' + k + '" title="שנה צבע" style="background:' + (curc || "transparent") + '"></button>';
       var col = stageColorOf(t);
       return '<div class="todoitem' + (t.done ? " done" : "") + '" data-i="' + k + '"' + (col ? ' style="border-inline-start:6px solid ' + col + '"' : "") + '>' +
+        '<button class="askicon askclaude-fb" data-i="' + k + '" title="שלח ל-Claude">✳</button>' +
         '<button class="todocheck fbcheck" data-i="' + k + '">' + (t.done ? "✓" : "") + '</button>' +
         '<div class="todobody"><textarea class="fbta" data-i="' + k + '" rows="2">' + esc(String(t.text || "").replace(/^\s*\[[^\]]+\]\s*/, "")) + '</textarea>' +
         (fbMeta === k ? '<div class="fbmeta"><input class="fbch" list="charlist" data-i="' + k + '" value="' + esc(t.ch || "") + '" placeholder="דמות, דמות">' +
@@ -711,7 +712,7 @@
         '</div><div class="todoacts"><button class="fbcur todocur" data-i="' + k + '" title="שנה חלק" style="background:' + (stageColorOf(t) || "transparent") + '"></button>' +
         '<span class="fbcap todocap" data-i="' + k + '">' + esc([t.ch, stNorm(t.pt)].filter(Boolean).join(" · ")) + '</span>' +
         (todoPick === k ? '<div class="fbdots">' + STAGES.map(function (x) { var c = STAGE_COLORS[x]; return '<button class="fbdot todocol' + (stageColorOf(t) === c ? " on" : "") + '" data-i="' + k + '" data-s="' + x + '" title="' + x + '" style="background:' + c + '"></button>'; }).join("") + '</div>' : '') +
-        '<button class="linkbtn askclaude-todo" data-i="' + k + '">שלח ל-Claude</button><button class="linkbtn todolinkbtn" data-i="' + k + '">קשר</button>' +
+        '<button class="askicon askclaude-todo" data-i="' + k + '" title="שלח ל-Claude">✳</button><button class="linkbtn todolinkbtn" data-i="' + k + '">קשר</button>' +
         '<button class="linkbtn tododel" data-i="' + k + '">מחק</button></div></div>';
     }).join("") + '</div>';
     if (!todos.length) html += '<div class="empty">אין עדיין פריטים. כתוב כאן מחשבה, והיא תישאר במסמך.</div>';
@@ -1121,6 +1122,13 @@
           copyAndFlash(ask, "שאלה על סצנה בתסריט (אל תשנה את המסמך):\nסצנה: " + sc.h + "\nמה קורה: " + (sc.s || "(עדיין אין תקציר)") + (plotNames ? "\nעלילות: " + plotNames : "") +
             "\n\nתן לי 3 אפשרויות לחזק או לשנות את הסצנה הזו, כל אחת במשפט אחד עם הסבר קצר ומה היא משנה. אל תכתוב הצעות בפורמט של תיקון בתסריט, רק את האפשרויות.");
         }
+        return;
+      }
+      var askF = e.target.closest(".askclaude-fb");
+      if (askF) {
+        var ft = fbItems[+askF.dataset.i];
+        copyAndFlash(askF, "פריט מסיכום השיחה עם המרצה (אל תשנה את המסמך):\n" + (ft.text || "") + (ft.sn ? "\nסצנה " + ft.sn : "") + (ft.ch ? "\nדמות: " + ft.ch : "") + (fltStageOf(ft) || ft.pt ? "\nחלק: " + (stNorm(ft.pt) || fltStageOf(ft)) : "") +
+          "\n\nעזור לי לחשוב על זה. אם צריך תיקון בתסריט, כתוב אותו בפורמט ההצעה הרגיל. אל תשנה את המסמך.");
         return;
       }
       var askT = e.target.closest(".askclaude-todo");
