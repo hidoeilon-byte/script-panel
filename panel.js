@@ -447,7 +447,8 @@
   var noteSel = "";
   var showDone = false;
   var walkOpen = false;
-  var cmtShow = false;   // the macro hides comments every time the script opens
+  var cmtShow = false;
+  var notesFolded = lsGet("notesFold", "") === "1";   // the macro hides comments every time the script opens
   var synNoteCount = 0;
   function isSynNote(t) { t = (t || "").trim(); return /^סינופסיס \d+:/.test(t) || /^תסריט:/.test(t); }
   function openNotes() { return notes ? notes.filter(function (n) { return !n.resolved; }).length : 0; }
@@ -580,6 +581,8 @@
           '<button class="lb noteok" data-id="' + esc(n.id) + '" title="' + (n.resolved ? "פתח מחדש" : "סמן כטופל") + '">' + (n.resolved ? "↺" : "✓ טופל") + '</button></div>';
       }).join("") + '</div>';
     }
+    var foldHead = '<div class="chgrow"><button class="linkbtn" id="notesfold">' + (notesFolded ? "▸ הצג את כל ההערות" : "▾ מזער את כל ההערות") + '</button></div>';
+    html = notesFolded ? foldHead : foldHead + html;
     var y = window.scrollY, sy = list.scrollTop;
     list.innerHTML = html;
     window.scrollTo(0, y); list.scrollTop = sy;
@@ -663,7 +666,7 @@
   }
 
   function renderTools(list, only) {
-    list.innerHTML = TOOLS.filter(function (g) { return !only || g.h.indexOf(only) === 0; }).map(function (g) {
+    list.innerHTML = TOOLS.filter(function (g) { return only ? g.h.indexOf(only) === 0 : g.h.indexOf("השוואה חכמה") !== 0; }).map(function (g) {
       return '<div class="toolgrp"><div class="toolh">' + esc(g.h) + '</div>' + g.items.map(function (it) {
         return '<button class="toolbtn' + (toolPending === it.cmd ? " busy" : "") + '" data-cmd="' + it.cmd + '"><b>' + esc(it.t) + '</b><span>' +
           esc(toolPending === it.cmd ? "נשלח… (עד 2 שניות)" : it.d) + '</span></button>';
@@ -1090,6 +1093,7 @@
         if (tsc) { W.gotoHeading(todos[+tsc.dataset.i].scene).catch(showErr); return; }
         return;
       }
+      if ((view === "notes" || view === "compare") && e.target.closest("#notesfold")) { notesFolded = !notesFolded; lsSet("notesFold", notesFolded ? "1" : ""); renderList(); return; }
       if ((view === "notes" || view === "compare") && !e.target.closest(".toolbtn, #smartcopy")) {
         if (e.target.id === "notedone") { showDone = e.target.checked; renderList(); return; }
         if (e.target.closest("#instrsend")) { walkOpen = walkOpen === "instr" ? false : "instr"; renderList(); return; }
