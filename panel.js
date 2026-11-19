@@ -158,6 +158,7 @@
         '<button data-view="heads" class="' + (view === "heads" ? "on" : "") + '">כותרות</button>' +
         '<button data-view="struct" class="' + (view === "struct" ? "on" : "") + '">מבנה</button>' +
         '<button data-view="changes" class="' + (view === "changes" ? "on" : "") + '">שינויים</button>' +
+        '<button data-view="todo" class="' + (view === "todo" ? "on" : "") + '">שלי</button>' +
         '<button data-view="notes" class="' + (view === "notes" ? "on" : "") + '">הערות' + (openNotes() ? ' <span class="badge">' + openNotes() + '</span>' : '') + '</button>' +
         '<button data-view="tools" class="' + (view === "tools" ? "on" : "") + '">כלים</button>' +
       '</div>' +
@@ -563,6 +564,36 @@
     list.innerHTML = html;
     window.scrollTo(0, y); list.scrollTop = sy;
   }
+  // ---------- personal list (שלי): thoughts and things to work on, kept in the document
+  var todos = null, todoDraft = "", todoLinking = "";
+  function saveTodos() { W.saveTodo(todos); }
+  function renderTodo(list) {
+    if (!todos) { todos = W.loadTodo() || []; }
+    var open = todos.filter(function (t) { return !t.done; }).length;
+    var html = '<div class="chgctl"><div class="chgrow"><span class="chgstat">' + open + ' פתוחים מתוך ' + todos.length + '</span></div>' +
+      '<div class="todoadd"><input id="todoin" type="text" placeholder="מחשבה או משהו לעבוד עליו…" value="' + esc(todoDraft) + '">' +
+      '<button class="lb on" id="todoadd">הוסף</button></div></div>';
+    html += '<div class="chglist">' + todos.map(function (t, k) {
+      return '<div class="todoitem' + (t.done ? " done" : "") + '" data-i="' + k + '">' +
+        '<button class="todocheck" data-i="' + k + '">' + (t.done ? "✓" : "") + '</button>' +
+        '<div class="todobody"><div class="todotext">' + esc(t.text) + '</div>' +
+        (t.scene ? '<button class="linkbtn todoscene" data-i="' + k + '">📍 ' + esc(t.scene) + '</button>' : '') +
+        (todoLinking === String(k) ? '<div class="todolink">בחר כותרת סצנה בתסריט, ואז לחץ "קשר כאן"<br><button class="lb on" id="todolinkok" data-i="' + k + '">קשר לסצנה הנוכחית</button></div>' : '') +
+        '</div><div class="todoacts"><button class="linkbtn todolinkbtn" data-i="' + k + '">קשר</button>' +
+        '<button class="linkbtn tododel" data-i="' + k + '">מחק</button></div></div>';
+    }).join("") + '</div>';
+    if (!todos.length) html += '<div class="empty">אין עדיין פריטים. כתוב כאן מחשבה, והיא תישאר במסמך.</div>';
+    var sy = list.scrollTop;
+    list.innerHTML = html;
+    list.scrollTop = sy;
+  }
+  function todoAdd() {
+    var t = (todoDraft || "").trim();
+    if (!t) return;
+    todos.push({ text: t, done: false, scene: "" });
+    todoDraft = ""; saveTodos(); renderList();
+  }
+
   function renderTools(list) {
     list.innerHTML = TOOLS.map(function (g) {
       return '<div class="toolgrp"><div class="toolh">' + esc(g.h) + '</div>' + g.items.map(function (it) {
@@ -633,6 +664,7 @@
     if (view === "changes") { list.className = "view-changes"; renderChanges(list); return; }
     if (view === "tools") { list.className = "view-tools"; renderTools(list); return; }
     if (view === "notes") { list.className = "view-notes"; renderNotes(list); return; }
+    if (view === "todo") { list.className = "view-notes"; renderTodo(list); return; }
     list.className = view === "struct" ? "view-struct" : "";
     if (!scenes.length) {
       list.innerHTML = '<div class="empty">אין עדיין סצנות.<br>כותרת סצנה חדשה: Tab עד שמגיעים לסצנה</div>';
@@ -670,7 +702,7 @@
   function render() {
     renderBar();
     renderPlotBar();
-    var hideBars = view === "changes" || view === "tools" || view === "notes";
+    var hideBars = view === "changes" || view === "tools" || view === "notes" || view === "todo";
     $("markbar").hidden = hideBars;
     if (hideBars) $("plotbar").hidden = true;
     renderList();
@@ -809,7 +841,30 @@
     });
 
     var list = $("scenes");
+    list.addEventListener("input", function (e) { if (e.target.id === "todoin") todoDraft = e.target.value; });
+    list.addEventListener("keydown", function (e) { if (e.target.id === "todoin" && e.key === "Enter") { todoDraft = e.target.value; todoAdd(); } });
     list.addEventListener("click", function (e) {
+      if (view === "todo") {
+        if (e.target.closest("#todoadd")) { todoDraft = $("todoin").value; todoAdd(); return; }
+        var tk = e.target.closest(".todocheck");
+        if (tk) { var ti = +tk.dataset.i; todos[ti].done = !todos[ti].done; saveTodos(); renderList(); return; }
+        var td = e.target.closest(".tododel");
+        if (td) { todos.splice(+td.dataset.i, 1); saveTodos(); renderList(); return; }
+        var tl = e.target.closest(".todolinkbtn");
+        if (tl) { todoLinking = todoLinking === tl.dataset.i ? "" : tl.dataset.i; renderList(); return; }
+        var tok = e.target.closest("#todolinkok");
+        if (tok) {
+          var ti2 = +tok.dataset.i;
+          W.currentSceneTitle().then(function (sc) {
+            if (sc) { todos[ti2].scene = sc; saveTodos(); }
+            todoLinking = ""; renderList();
+          }).catch(showErr);
+          return;
+        }
+        var tsc = e.target.closest(".todoscene");
+        if (tsc) { W.gotoHeading(todos[+tsc.dataset.i].scene).catch(showErr); return; }
+        return;
+      }
       if (view === "notes") {
         if (e.target.id === "notedone") { showDone = e.target.checked; renderList(); return; }
         if (e.target.closest("#instrsend")) { walkOpen = walkOpen === "instr" ? false : "instr"; renderList(); return; }

@@ -273,3 +273,12 @@ header { padding: 10px 10px 8px; border-bottom: 1px solid var(--line); }
 .findable:hover { background: rgba(64, 224, 208, .25); }
 .warnjump { cursor: pointer; }
 .warnjump:hover { text-decoration: underline; }
+.todoadd { display: flex; gap: 5px; margin-top: 6px; }
+.todoadd input { flex: 1; font: inherit; font-size: 13px; padding: 5px 7px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); }
+.todoitem { display: flex; gap: 7px; align-items: flex-start; border: 1px solid var(--line); background: var(--card); border-radius: 7px; padding: 7px; margin-bottom: 5px; }
+.todoitem.done { opacity: .5; }
+.todocheck { width: 22px; height: 22px; flex: none; border-radius: 5px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; font: inherit; }
+.todobody { flex: 1; min-width: 0; }
+.todotext { font-size: 13px; line-height: 1.45; word-break: break-word; }
+.todoacts { display: flex; flex-direction: column; gap: 3px; align-items: flex-end; }
+.todolink { font-size: 11.5px; color: var(--muted); margin-top: 4px; }

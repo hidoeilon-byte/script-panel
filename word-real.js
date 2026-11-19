@@ -532,6 +532,36 @@
       return null;
     },
 
+    // personal list, stored in the document's settings (like the scene data)
+    loadTodo: function () {
+      try { return Office.context.document.settings.get("scenePanel.todo") || []; } catch (e) { return []; }
+    },
+    saveTodo: function (list) {
+      try { var st = Office.context.document.settings; st.set("scenePanel.todo", list); st.saveAsync(); } catch (e) {}
+    },
+    currentSceneTitle: function () {
+      return run(function (ctx) {
+        var sel = ctx.document.getSelection();
+        var before = ctx.document.body.getRange("Start").expandTo(sel.getRange("Start"));
+        var ps = before.paragraphs;
+        ps.load("items/style,items/text");
+        return ctx.sync().then(function () {
+          for (var i = ps.items.length - 1; i >= 0; i--) if (ps.items[i].style === SCENE) return ps.items[i].text.trim();
+          return "";
+        });
+      });
+    },
+    gotoHeading: function (text) {
+      return run(function (ctx) {
+        var hits = ctx.document.body.search(text.slice(0, 250), { matchCase: true });
+        hits.load("items");
+        return ctx.sync().then(function () {
+          if (hits.items[0]) hits.items[0].select("Start");
+          return ctx.sync();
+        });
+      });
+    },
+
     saveData: function (data) {
       try {
         var st = Office.context.document.settings;
