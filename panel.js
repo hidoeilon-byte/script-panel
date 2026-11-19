@@ -721,11 +721,11 @@
             var sc = scenes[i];
             var sumPart = sumEdit === i
               ? '<textarea class="srta" data-i="' + i + '" rows="2">' + esc(sc.s || "") + '</textarea>'
-              : (sc.s ? '<div class="srsum">' + esc(sc.s) + '</div>' : '<div class="srsum srempty">אין תקציר</div>');
+              : (sc.s ? '<div class="srsum" data-i="' + i + '">' + esc(sc.s) + '</div>' : '<div class="srsum srempty" data-i="' + i + '">לחץ כדי לכתוב תקציר</div>');
             var mkc = sc.m ? markById(sc.m) : null;
             return '<div class="strow' + (mkc ? " marked" : "") + '" draggable="true" data-i="' + i + '"' + (mkc ? ' style="border-inline-start:6px solid ' + mkc.c + '"' : "") + '>' +
               '<span class="srnum">' + (i + 1) + '</span><span class="srhead">' + esc(sc.h) + '</span>' +
-              '<button class="linkbtn sredit" data-i="' + i + '">✎ ערוך תקציר</button>' + sumPart + '</div>';
+              sumPart + '</div>';
           }).join("");
         }
         html += '</div>';
@@ -944,7 +944,7 @@
       }
       var ph = e.target.closest(".parthead");
       if (ph) { var pg = ph.parentNode.dataset.stage; stageOpen[pg] = !stageOpen[pg]; renderList(); return; }
-      var sed = e.target.closest(".sredit");
+      var sed = e.target.closest(".srsum");
       if (sed) { sumEdit = +sed.dataset.i; renderList(); var ta = document.querySelector('.srta[data-i="' + sumEdit + '"]'); if (ta) ta.focus(); return; }
       var sr = e.target.closest(".strow");
       if (sr && !e.target.closest("button") && !e.target.closest("textarea")) { W.goToScene(+sr.dataset.i).catch(showErr); return; }
