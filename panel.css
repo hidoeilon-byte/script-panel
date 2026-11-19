@@ -290,3 +290,7 @@ body.compact #bar .cnt { display: none; }
 #bar .seg.sub { order: 5; flex: 1 0 100%; display: flex; }
 #bar .seg.sub button { flex: 1; }
 #bar .seg:not(.sub) { flex: 0 0 auto; }
+.askrow { margin-top: 4px; }
+.askrow .lb { font-size: 12px; }
+.askrow { margin-top: 4px; }
+.askrow .lb { font-size: 12px; }

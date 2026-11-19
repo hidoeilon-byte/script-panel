@@ -244,6 +244,7 @@
     var s = scenes[i];
     return '<div class="editor" data-i="' + i + '">' +
       '<textarea class="ed" data-i="' + i + '" rows="2" placeholder="תקציר של שורה אחת: מה קורה בסצנה">' + esc(s.s) + '</textarea>' +
+      '<div class="askrow"><button class="lb askclaude" data-i="' + i + '">שאל את Claude על הסצנה</button></div>' +
       '<div class="elabel">עלילות</div>' +
       '<div class="eplots">' + plots.map(function (p) {
         return chip(p, (s.p.indexOf(p.id) >= 0 ? " on" : " off") + " tog-plot");
@@ -589,13 +590,23 @@
         '<div class="todobody"><div class="todotext">' + esc(t.text) + '</div>' +
         (t.scene ? '<button class="linkbtn todoscene" data-i="' + k + '">📍 ' + esc(t.scene) + '</button>' : '') +
         (todoLinking === String(k) ? '<div class="todolink">בחר כותרת סצנה בתסריט, ואז לחץ "קשר כאן"<br><button class="lb on" id="todolinkok" data-i="' + k + '">קשר לסצנה הנוכחית</button></div>' : '') +
-        '</div><div class="todoacts"><button class="linkbtn todolinkbtn" data-i="' + k + '">קשר</button>' +
+        '</div><div class="todoacts"><button class="linkbtn askclaude-todo" data-i="' + k + '">שלח ל-Claude</button><button class="linkbtn todolinkbtn" data-i="' + k + '">קשר</button>' +
         '<button class="linkbtn tododel" data-i="' + k + '">מחק</button></div></div>';
     }).join("") + '</div>';
     if (!todos.length) html += '<div class="empty">אין עדיין פריטים. כתוב כאן מחשבה, והיא תישאר במסמך.</div>';
     var sy = list.scrollTop;
     list.innerHTML = html;
     list.scrollTop = sy;
+  }
+  function copyAndFlash(btn, text) {
+    var done = function () { var old = btn.textContent; btn.textContent = "הועתק ✓"; setTimeout(function () { btn.textContent = old; }, 1800); };
+    try { if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(done, function () { fallbackCopy(text); done(); }); return; } } catch (e) {}
+    fallbackCopy(text); done();
+  }
+  function fallbackCopy(text) {
+    var ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); } catch (e) {}
+    document.body.removeChild(ta);
   }
   function todoAdd() {
     var t = (todoDraft || "").trim();
@@ -870,6 +881,23 @@
     list.addEventListener("input", function (e) { if (e.target.id === "todoin") todoDraft = e.target.value; });
     list.addEventListener("keydown", function (e) { if (e.target.id === "todoin" && e.key === "Enter") { todoDraft = e.target.value; todoAdd(); } });
     list.addEventListener("click", function (e) {
+      var ask = e.target.closest(".askclaude");
+      if (ask) {
+        var sc = scenes[+ask.dataset.i];
+        if (sc) {
+          var plotNames = plots.filter(function (p) { return sc.p.indexOf(p.id) >= 0; }).map(function (p) { return p.n; }).join(", ");
+          copyAndFlash(ask, "שאלה על סצנה בתסריט (אל תשנה את המסמך):\nסצנה: " + sc.h + "\nמה קורה: " + (sc.s || "(עדיין אין תקציר)") + (plotNames ? "\nעלילות: " + plotNames : "") +
+            "\n\nתן לי 3 אפשרויות לחזק או לשנות את הסצנה הזו, כל אחת במשפט אחד עם הסבר קצר ומה היא משנה. אל תכתוב הצעות בפורמט של תיקון בתסריט, רק את האפשרויות.");
+        }
+        return;
+      }
+      var askT = e.target.closest(".askclaude-todo");
+      if (askT) {
+        var tt2 = todos[+askT.dataset.i];
+        copyAndFlash(askT, "מחשבה מהרשימה שלי על התסריט:\n" + tt2.text + (tt2.scene ? "\nסצנה: " + tt2.scene : "") +
+          "\n\nעזור לי לחשוב על זה. אם צריך תיקון בתסריט, כתוב אותו בפורמט ההצעה הרגיל. אל תשנה את המסמך.");
+        return;
+      }
       if (view === "todo") {
         if (e.target.closest("#todoadd")) { todoDraft = $("todoin").value; todoAdd(); return; }
         var tk = e.target.closest(".todocheck");
