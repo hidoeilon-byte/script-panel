@@ -638,7 +638,7 @@
     var stOpts = [""].concat(STAGES, ["לא שויך"]);
     return '<div class="fltbar">' +
       '<select id="fltch"><option value="">כל הדמויות</option>' + (charNames || []).map(function (n) { return '<option value="' + esc(n) + '"' + (flt.ch === n ? " selected" : "") + '>' + esc(n) + '</option>'; }).join("") + '</select>' +
-      (isFb ? '<button class="fltpartsbtn' + (partsOpen ? " on" : "") + '" id="fltparts">חלקים ▾</button>' : '') +
+      '<select id="fltst"><option value="">כל החלקים</option>' + STAGES.map(function (x) { return '<option value="' + x + '"' + (flt.st === x ? " selected" : "") + '>' + x + '</option>'; }).join("") + '</select>' +
       '</div>';
   }
 
@@ -669,7 +669,6 @@
       '<button class="lb on" id="fbpasteok">הוסף לרשימה</button> <span class="chgstat" id="fbres"></span></div></details>' +
       '<div class="chgctl"><div class="chgrow"><span class="chgstat">' + open + ' פתוחים מתוך ' + fbItems.length + '</span></div></div>';
     html += fltBar(true);
-    if (partsOpen) html += legendHtml();
     html += '<datalist id="charlist">' + (charNames || []).map(function (n) { return '<option value="' + esc(n) + '">'; }).join("") + '</datalist>';
     html += '<div class="chglist">' + fbItems.map(function (t, k) {
       if (!fltOk(t, true)) return "";
@@ -700,7 +699,7 @@
     var html = '<div class="chgctl"><div class="chgrow"><span class="chgstat">' + open + ' פתוחים מתוך ' + todos.length + '</span></div>' +
       '<div class="todoadd"><input id="todoin" type="text" placeholder="מחשבה או משהו לעבוד עליו…" value="' + esc(todoDraft) + '">' +
       '<button class="lb on" id="todoadd">הוסף</button></div></div>';
-    html = fltBar(true) + (partsOpen ? legendHtml() : "") + html;
+    html = fltBar(true) + html;
     html += '<div class="chglist">' + todos.map(function (t, k) {
       if (!fltOk(t, false)) return "";
       return '<div class="todoitem' + (t.done ? " done" : "") + '" data-i="' + k + '"' + (stageColorOf(t) ? ' style="border-inline-start:6px solid ' + stageColorOf(t) + '"' : "") + '>' +
