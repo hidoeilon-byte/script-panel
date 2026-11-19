@@ -580,6 +580,12 @@
   }
   // ---------- משוב: a list from a conversation with the lecturer (own tab, own storage)
   var fbItems = null, fbPaste = "";
+  // colour per category Claude writes in brackets: set from the start, the user can still change it per item
+  var FB_CAT_COLORS = { "לשנות": "#ef4444", "להוסיף": "#22c55e", "להסיר": "#f59e0b", "לבדוק": "#3b82f6", "כללי": "#a855f7" };
+  function fbCatColor(t) {
+    var m = (t.text || "").match(/^\[([^\]]+)\]/);
+    return m && FB_CAT_COLORS[m[1].trim()] ? FB_CAT_COLORS[m[1].trim()] : "";
+  }
   function renderFeedback(list) {
     if (!fbItems) fbItems = W.loadFeedback() || [];
     var open = fbItems.filter(function (t) { return !t.done; }).length;
@@ -592,6 +598,7 @@
       var cols = ["#ef4444", "#f59e0b", "#22c55e", "#3b82f6", "#a855f7"];
       var dots = cols.map(function (c) { return '<button class="fbdot' + (t.c === c ? " on" : "") + '" data-i="' + k + '" data-c="' + c + '" style="background:' + c + '"></button>'; }).join("") +
         '<button class="fbdot fbdot-none' + (!t.c ? " on" : "") + '" data-i="' + k + '" data-c=""></button>';
+      if (t.c === undefined) t.c = fbCatColor(t);
       return '<div class="todoitem' + (t.done ? " done" : "") + '" data-i="' + k + '"' + (t.c ? ' style="border-inline-start:6px solid ' + t.c + '"' : "") + '>' +
         '<button class="todocheck fbcheck" data-i="' + k + '">' + (t.done ? "✓" : "") + '</button>' +
         '<div class="todobody"><div class="todotext">' + esc(t.text) + '</div>' +
@@ -1023,7 +1030,9 @@
             var sm = t.match(/סצנה\s*(\d+)/);
             var sn = sm ? +sm[1] : 0;
             var clean = sm ? t.replace(/סצנה\s*\d+\s*[:\-–.]?\s*/, "").trim() : t;
-            fbItems.push({ text: clean || t, done: false, sn: sn }); fn++;
+            var item = { text: clean || t, done: false, sn: sn };
+            item.c = fbCatColor(item);
+            fbItems.push(item); fn++;
           });
           fbPaste = "";
           if (fn) saveFeedback();
