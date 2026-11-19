@@ -626,7 +626,7 @@
     var cOpts = [["", "כל הצבעים"], ["none", "בלי צבע"], ["#ef4444", "לשנות"], ["#22c55e", "להוסיף"], ["#f59e0b", "להסיר"], ["#3b82f6", "לבדוק"], ["#a855f7", "כללי"]];
     var stOpts = [""].concat(STAGES, ["לא שויך"]);
     return '<div class="fltbar">' +
-      '<select id="fltc">' + cOpts.map(function (o) { return '<option value="' + o[0] + '"' + (flt.c === o[0] ? " selected" : "") + '>' + o[1] + '</option>'; }).join("") + '</select>' +
+      '<div class="fltcols">' + cOpts.map(function (o) { return '<button class="fltcol' + (flt.c === o[0] ? " on" : "") + '" data-c="' + o[0] + '" title="' + o[1] + '" style="background:' + (o[0] && o[0] !== "none" ? o[0] : "transparent") + '"></button>'; }).join("") + '</div>' +
       '<select id="fltch"><option value="">כל הדמויות</option>' + (charNames || []).map(function (n) { return '<option value="' + esc(n) + '"' + (flt.ch === n ? " selected" : "") + '>' + esc(n) + '</option>'; }).join("") + '</select>' +
       '<select id="fltst">' + stOpts.map(function (o) { return '<option value="' + esc(o) + '"' + (flt.st === o ? " selected" : "") + '>' + (o || "כל החלקים") + '</option>'; }).join("") + '</select>' +
       '</div>';
@@ -650,7 +650,7 @@
       '<div class="chgctl"><div class="chgrow"><span class="chgstat">' + open + ' פתוחים מתוך ' + fbItems.length + '</span></div></div>';
     html += '<div class="fblegend"><span class="lbl">מקרא:</span> ' +
       [["לשנות", "#ef4444"], ["להוסיף", "#22c55e"], ["להסיר", "#f59e0b"], ["לבדוק", "#3b82f6"], ["כללי", "#a855f7"]].map(function (x) {
-        return '<span class="fbleg" title="' + x[0] + '"><i style="background:' + x[1] + '"></i></span>';
+        return '<span class="fbleg"><i style="background:' + x[1] + '"></i>' + x[0] + '</span>';
       }).join("") + '</div>';
     html = fltBar() + html;
     html += '<div class="chglist">' + fbItems.map(function (t, k) {
@@ -1031,8 +1031,8 @@
       sumEdit = -1; renderList();
     });
   list.addEventListener("change", function (e) {
-      if (e.target.id === "fltc" || e.target.id === "fltch" || e.target.id === "fltst") {
-        flt[e.target.id === "fltc" ? "c" : e.target.id === "fltch" ? "ch" : "st"] = e.target.value;
+      if (e.target.id === "fltch" || e.target.id === "fltst") {
+        flt[e.target.id === "fltch" ? "ch" : "st"] = e.target.value;
         renderList(); return;
       }
       var tc = e.target.classList || { contains: function () { return false; } };
@@ -1109,6 +1109,8 @@
           "\n\nעזור לי לחשוב על זה. אם צריך תיקון בתסריט, כתוב אותו בפורמט ההצעה הרגיל. אל תשנה את המסמך.");
         return;
       }
+      var fcolB = e.target.closest(".fltcol");
+      if (fcolB) { flt.c = fcolB.dataset.c || ""; renderList(); return; }
       if (view === "feedback" || (view === "todo" && e.target.closest("#colR"))) {
         var fl = $("colR") || list;
         if (e.target.closest("#fbopen")) {
