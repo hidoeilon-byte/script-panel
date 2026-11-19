@@ -161,7 +161,7 @@
   // three groups; each group has two sub-tabs
   var GROUPS = [
     { g: "script", t: "תסריט", subs: [["struct", "מבנה"]] },
-    { g: "notes", t: "הערות", subs: [["notes", "הערות"], ["todo", "שלי ומשוב"]] },
+    { g: "notes", t: "הערות", subs: [["notes", "הערות"], ["todo", "שלי"], ["feedback", "משוב"]] },
     { g: "comparisons", t: "השוואות", subs: [["changes", "דראפטים"], ["compare", "סינופסיס"]] },
     { g: "tools", t: "כלים", subs: [["tools", "כלים"]] }
   ];
@@ -731,11 +731,7 @@
     if (view === "changes") { list.className = "view-changes"; renderChanges(list); return; }
     if (view === "tools") { list.className = "view-tools"; renderTools(list); return; }
     if (view === "notes") { list.className = "view-notes"; renderNotes(list); return; }
-    if (view === "todo") {
-      list.className = "view-notes";
-      list.innerHTML = '<div class="twocols"><div id="colL"></div><div id="colR"></div></div>';
-      renderTodo($("colL")); renderFeedback($("colR")); return;
-    }
+    if (view === "todo") { list.className = "view-notes"; renderTodo(list); return; }
     if (view === "compare") { list.className = "view-tools"; renderTools(list, "השוואה חכמה"); return; }
     if (view === "feedback") { list.className = "view-notes"; renderFeedback(list); return; }
     list.className = view === "struct" ? "view-struct" : "";
