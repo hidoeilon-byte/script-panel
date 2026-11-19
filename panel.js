@@ -579,7 +579,7 @@
     window.scrollTo(0, y); list.scrollTop = sy;
   }
   // ---------- משוב: a list from a conversation with the lecturer (own tab, own storage)
-  var fbItems = null, fbPaste = "";
+  var fbItems = null, fbPaste = "", fbPick = -1;
   // colour per category Claude writes in brackets: set from the start, the user can still change it per item
   var FB_CAT_COLORS = { "לשנות": "#ef4444", "להוסיף": "#22c55e", "להסיר": "#f59e0b", "לבדוק": "#3b82f6", "כללי": "#a855f7" };
   function fbCatColor(t) {
@@ -594,17 +594,22 @@
       '<textarea id="fbpaste" rows="4" placeholder="הדבק כאן את הרשימה, שורה לכל פריט. למשל: [לשנות] …">' + esc(fbPaste) + '</textarea>' +
       '<button class="lb on" id="fbpasteok">הוסף לרשימה</button> <span class="chgstat" id="fbres"></span></div></details>' +
       '<div class="chgctl"><div class="chgrow"><span class="chgstat">' + open + ' פתוחים מתוך ' + fbItems.length + '</span></div></div>';
+    html += '<div class="fblegend"><span class="lbl">מקרא:</span> ' +
+      [["לשנות", "#ef4444"], ["להוסיף", "#22c55e"], ["להסיר", "#f59e0b"], ["לבדוק", "#3b82f6"], ["כללי", "#a855f7"]].map(function (x) {
+        return '<span class="fbleg"><i style="background:' + x[1] + '"></i>' + x[0] + '</span>';
+      }).join("") + '</div>';
     html += '<div class="chglist">' + fbItems.map(function (t, k) {
       var cols = ["#ef4444", "#f59e0b", "#22c55e", "#3b82f6", "#a855f7"];
       var curc = t.cu !== undefined ? t.cu : fbCatColor(t);
-      var dots = cols.map(function (c) { return '<button class="fbdot' + (curc === c ? " on" : "") + '" data-i="' + k + '" data-c="' + c + '" style="background:' + c + '"></button>'; }).join("") +
-        '<button class="fbdot fbdot-none' + (!curc ? " on" : "") + '" data-i="' + k + '" data-c=""></button>';
+      var dots = fbPick === k ? cols.map(function (c) { return '<button class="fbdot' + (curc === c ? " on" : "") + '" data-i="' + k + '" data-c="' + c + '" style="background:' + c + '"></button>'; }).join("") +
+        '<button class="fbdot fbdot-none' + (!curc ? " on" : "") + '" data-i="' + k + '" data-c=""></button>' : '';
+      var curBtn = '<button class="fbcur" data-i="' + k + '" title="שנה צבע" style="background:' + (curc || "transparent") + '"></button>';
       var col = t.cu !== undefined ? t.cu : fbCatColor(t);
       return '<div class="todoitem' + (t.done ? " done" : "") + '" data-i="' + k + '"' + (col ? ' style="border-inline-start:6px solid ' + col + '"' : "") + '>' +
         '<button class="todocheck fbcheck" data-i="' + k + '">' + (t.done ? "✓" : "") + '</button>' +
         '<div class="todobody"><div class="todotext">' + esc(t.text) + '</div>' +
         (t.sn ? '<button class="linkbtn fbscene" data-sn="' + t.sn + '">📍 סצנה ' + t.sn + '</button>' : '') + '</div>' +
-        '<div class="todoacts"><div class="fbdots">' + dots + '</div><button class="linkbtn fbdel" data-i="' + k + '">מחק</button></div></div>';
+        '<div class="todoacts">' + curBtn + '<div class="fbdots">' + dots + '</div><button class="linkbtn fbdel" data-i="' + k + '">מחק</button></div></div>';
     }).join("") + '</div>';
     if (!fbItems.length) html += '<div class="empty">עוד אין פריטים מהשיחה עם המרצה.</div>';
     list.innerHTML = html;
@@ -1042,8 +1047,10 @@
         }
         var fc = e.target.closest(".fbcheck");
         if (fc) { var fi = +fc.dataset.i; fbItems[fi].done = !fbItems[fi].done; saveFeedback(); renderFeedback(list); return; }
+        var fcur = e.target.closest(".fbcur");
+        if (fcur) { var ci2 = +fcur.dataset.i; fbPick = fbPick === ci2 ? -1 : ci2; renderFeedback(list); return; }
         var fdot = e.target.closest(".fbdot");
-        if (fdot) { var di = +fdot.dataset.i; fbItems[di].cu = fdot.dataset.c || ""; saveFeedback(); renderFeedback(list); return; }
+        if (fdot) { var di = +fdot.dataset.i; fbItems[di].cu = fdot.dataset.c || ""; fbPick = -1; saveFeedback(); renderFeedback(list); return; }
         var fsc = e.target.closest(".fbscene");
         if (fsc) { W.goToScene(+fsc.dataset.sn - 1).catch(showErr); return; }
         var fdl = e.target.closest(".fbdel");
