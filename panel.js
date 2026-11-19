@@ -588,7 +588,7 @@
     window.scrollTo(0, y); list.scrollTop = sy;
   }
   // ---------- משוב: a list from a conversation with the lecturer (own tab, own storage)
-  var fbItems = null, fbPaste = "", fbPick = -1;
+  var fbItems = null, fbPaste = "", fbPick = -1, fbEdit = -1;
   // colour per category Claude writes in brackets: set from the start, the user can still change it per item
   var FB_CAT_COLORS = { "לשנות": "#ef4444", "להוסיף": "#22c55e", "להסיר": "#f59e0b", "לבדוק": "#3b82f6", "כללי": "#a855f7" };
   function fbCatColor(t) {
@@ -637,7 +637,7 @@
     html += '<div class="chglist">' + todos.map(function (t, k) {
       return '<div class="todoitem' + (t.done ? " done" : "") + '" data-i="' + k + '">' +
         '<button class="todocheck" data-i="' + k + '">' + (t.done ? "✓" : "") + '</button>' +
-        '<div class="todobody"><div class="todotext">' + esc(t.text) + '</div>' +
+        '<div class="todobody">' + (fbEdit === k ? '<textarea class="fbta" data-i="' + k + '" rows="3">' + esc(t.text) + '</textarea>' : '<div class="todotext fbtext" data-i="' + k + '">' + esc(t.text) + '</div>') +
         (t.scene ? '<button class="linkbtn todoscene" data-i="' + k + '">📍 ' + esc(t.scene) + '</button>' : '') +
         (todoLinking === String(k) ? '<div class="todolink">בחר כותרת סצנה בתסריט, ואז לחץ "קשר כאן"<br><button class="lb on" id="todolinkok" data-i="' + k + '">קשר לסצנה הנוכחית</button></div>' : '') +
         '</div><div class="todoacts"><button class="linkbtn askclaude-todo" data-i="' + k + '">שלח ל-Claude</button><button class="linkbtn todolinkbtn" data-i="' + k + '">קשר</button>' +
@@ -810,7 +810,7 @@
   function render() {
     renderBar();
     renderPlotBar();
-    var hideBars = view === "changes" || view === "tools" || view === "compare" || view === "notes" || view === "todo";
+    var hideBars = view === "changes" || view === "tools" || view === "compare" || view === "notes" || view === "todo" || view === "feedback";
     $("markbar").hidden = hideBars;
     if (hideBars) $("plotbar").hidden = true;
     renderList();
@@ -977,7 +977,15 @@
       if (scenes[i] && scenes[i].s !== e.target.value) { scenes[i].s = e.target.value.replace(/\n/g, " ").trim(); persist(); }
       sumEdit = -1; renderList();
     });
+  list.addEventListener("focusout", function (e) {
+      if (!e.target.classList || !e.target.classList.contains("fbta")) return;
+      var fi2 = +e.target.dataset.i, nv = e.target.value.trim();
+      fbEdit = -1;
+      if (fbItems[fi2] && nv && nv !== fbItems[fi2].text) { fbItems[fi2].text = nv; saveFeedback(); }
+      renderFeedback($("colR") || $("scenes"));
+  });
   list.addEventListener("keydown", function (e) {
+      if (e.target.classList && e.target.classList.contains("fbta") && e.key === "Enter" && !e.shiftKey) { e.preventDefault(); e.target.blur(); return; }
       if (e.target.classList && e.target.classList.contains("srta") && e.key === "Enter" && !e.shiftKey) { e.preventDefault(); e.target.blur(); }
   });
   list.addEventListener("dragover", function (e) { if (e.target.closest && e.target.closest(".part")) e.preventDefault(); });
@@ -1062,6 +1070,8 @@
         }
         var fc = e.target.closest(".fbcheck");
         if (fc) { var fi = +fc.dataset.i; fbItems[fi].done = !fbItems[fi].done; saveFeedback(); renderFeedback(fl); return; }
+        var ftx = e.target.closest(".fbtext");
+        if (ftx) { fbEdit = +ftx.dataset.i; renderFeedback(fl); var fta = document.querySelector('.fbta[data-i="' + fbEdit + '"]'); if (fta) fta.focus(); return; }
         var fcur = e.target.closest(".fbcur");
         if (fcur) { var ci2 = +fcur.dataset.i; fbPick = fbPick === ci2 ? -1 : ci2; renderFeedback(fl); return; }
         var fdot = e.target.closest(".fbdot");
