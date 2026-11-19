@@ -33,7 +33,7 @@
   var lastSub = { script: "heads", notes: "notes", tools: "changes" };
   var STAGES = ["אירוע מחולל", "אקספוזיציה", "נקודת מפנה", "נקודת מפנה שנייה", "נקודת שיא", "התרה"];
   var stageOpen = {};   // which parts of the structure are open (click the part header)
-  var dragI = -1;   // remembered sub-tab per group
+  var dragI = -1, sumEdit = -1;   // scene whose summary is being edited inside the parts   // remembered sub-tab per group
   var showSyn = true;
   var filter = null;    // plot id
   var collapsed = {};   // sequence start index -> true
@@ -714,14 +714,18 @@
         var open = !!stageOpen[stg] && stg !== "";
         if (stg === "" && !byStage[""].length) return;
         html += '<div class="part' + (open ? " open" : "") + '" data-stage="' + esc(stg) + '">' +
-          '<div class="parthead"><span class="arr">' + (open ? "▾" : "◂") + '</span> ' + (stg || "לא שויך") +
-          ' <span class="scount">' + byStage[stg].length + '</span></div>';
+          '<div class="parthead"><span class="arr">' + (open ? "▾" : "◂") + '</span> ' + (stg || "לא שויך") + '</div>';
         if (open || stg === "") {
           if (!byStage[stg].length) html += '<div class="stdrop">גרור לכאן סצנה מהרשימה</div>';
           html += byStage[stg].map(function (i) {
             var sc = scenes[i];
-            return '<div class="strow" draggable="true" data-i="' + i + '"><span class="srnum">' + (i + 1) + '</span><span class="srhead">' + esc(sc.h) + '</span>' +
-              (sc.s ? '<div class="srsum">' + esc(sc.s) + '</div>' : '') + '</div>';
+            var sumPart = sumEdit === i
+              ? '<textarea class="srta" data-i="' + i + '" rows="2">' + esc(sc.s || "") + '</textarea>'
+              : (sc.s ? '<div class="srsum">' + esc(sc.s) + '</div>' : '<div class="srsum srempty">אין תקציר</div>');
+            var mkc = sc.m ? markById(sc.m) : null;
+            return '<div class="strow' + (mkc ? " marked" : "") + '" draggable="true" data-i="' + i + '"' + (mkc ? ' style="border-inline-start:6px solid ' + mkc.c + '"' : "") + '>' +
+              '<span class="srnum">' + (i + 1) + '</span><span class="srhead">' + esc(sc.h) + '</span>' +
+              '<button class="linkbtn sredit" data-i="' + i + '">✎ ערוך תקציר</button>' + sumPart + '</div>';
           }).join("");
         }
         html += '</div>';
@@ -914,6 +918,15 @@
       var r = e.target.closest && e.target.closest(".strow");
       if (r) { dragI = +r.dataset.i; try { e.dataTransfer.setData("text/plain", String(dragI)); } catch (x) {} }
   });
+  list.addEventListener("focusout", function (e) {
+      if (!e.target.classList || !e.target.classList.contains("srta")) return;
+      var i = +e.target.dataset.i;
+      if (scenes[i] && scenes[i].s !== e.target.value) { scenes[i].s = e.target.value.replace(/\n/g, " ").trim(); persist(); }
+      sumEdit = -1; renderList();
+    });
+  list.addEventListener("keydown", function (e) {
+      if (e.target.classList && e.target.classList.contains("srta") && e.key === "Enter" && !e.shiftKey) { e.preventDefault(); e.target.blur(); }
+  });
   list.addEventListener("dragover", function (e) { if (e.target.closest && e.target.closest(".part")) e.preventDefault(); });
   list.addEventListener("drop", function (e) {
       var st = e.target.closest && e.target.closest(".part");
@@ -931,8 +944,10 @@
       }
       var ph = e.target.closest(".parthead");
       if (ph) { var pg = ph.parentNode.dataset.stage; stageOpen[pg] = !stageOpen[pg]; renderList(); return; }
+      var sed = e.target.closest(".sredit");
+      if (sed) { sumEdit = +sed.dataset.i; renderList(); var ta = document.querySelector('.srta[data-i="' + sumEdit + '"]'); if (ta) ta.focus(); return; }
       var sr = e.target.closest(".strow");
-      if (sr && !e.target.closest("button")) { W.goToScene(+sr.dataset.i).catch(showErr); return; }
+      if (sr && !e.target.closest("button") && !e.target.closest("textarea")) { W.goToScene(+sr.dataset.i).catch(showErr); return; }
       if (e.target.closest("#sumcopy")) {
         var lines = scenes.map(function (sc, i) { return "סצנה " + (i + 1) + ": " + sc.h; }).join("\n");
         copyAndFlash(e.target.closest("#sumcopy"), "כתוב לכל סצנה בתסריט משפט אחד בזמן הווה, על מה קורה בה. אל תשנה את המסמך. החזר רק רשימה, שורה לכל סצנה, בפורמט: \"סצנה N: המשפט\"\n\nהסצנות:\n" + lines);
