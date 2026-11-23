@@ -298,6 +298,18 @@
         });
       });
     },
+    // deletes every comment that starts with "השוואה:" (with its replies); other comments stay. Returns how many were deleted.
+    deleteCompareNotes: function () {
+      return run(function (ctx) {
+        var cs = ctx.document.body.getComments();
+        cs.load("items/content");
+        return ctx.sync().then(function () {
+          var hit = cs.items.filter(function (c) { return /^\s*השוואה:/.test(c.content || ""); });
+          hit.forEach(function (c) { c.delete(); });
+          return ctx.sync().then(function () { return hit.length; });
+        });
+      });
+    },
     resolveNote: function (id, done) {
       return run(function (ctx) {
         var cs = ctx.document.body.getComments();

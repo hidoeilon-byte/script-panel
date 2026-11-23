@@ -388,3 +388,5 @@ body.noheader #styles, body.noheader .status, body.noheader #locbox { display: n
 .scnbefore{border-right:3px solid var(--line,#ccc);padding-right:6px;margin:4px 0 6px;opacity:.75;max-height:220px;overflow:auto}
 .lmloc { cursor: pointer; border-radius: 4px; padding: 1px 4px; margin: 0 -4px; }
 .lmloc:hover { background: var(--bg); color: var(--accent); }
+.lb.del { color: #c0392b; }
+.lb.del.on { background: #c0392b; color: #fff; border-color: #c0392b; }

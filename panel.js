@@ -355,6 +355,7 @@
     prep: "הכנת הצעות לכרטיס התיקונים. עבור פעם אחת על כל הערות ה-Word שמתחילות ב\"השוואה:\" ולא סומנו כטופלו, ואין להן עדיין תשובה שמתחילה ב\"הצעה:\". בתחילת העבודה קרא פעם אחת את כל התסריט, כדי לשמור על רצף בין הסצנות. לכל הערה הוסף הצעה. " + SUGFMT + "אם אתה מוסיף הערה בסצנה אחרת, עגן אותה על אותו קטע. אל תשנה טקסט בתסריט, אל תסמן הערות כטופלו ואל תמחק הערות. בסוף כתוב בצ'אט רק כמה הצעות הוספת.",
     walk: "מעבר על ההשוואות. עבור איתי על הערות ה-Word שמתחילות ב\"השוואה:\" ועוד לא סומנו כטופלו, אחת אחת, לפי הסדר שלהן בתסריט מההתחלה לסוף (לא לפי הסדר שבו נכתבו). הערה אחת בכל פעם. לכל הערה: 1. בחר במסמך את הטקסט שההערה מעוגנת אליו, כדי שאקפוץ אליו, וסמן אותו במרקר צהוב. 2. קרא רק את הסצנה של ההערה, לא את כל המסמך, וכתוב \"הערה N מתוך M\", את כותרת הסצנה ואת תוכן ההערה. 3. הצע ניסוח קצר לתוספת או לשינוי בתסריט, בפורמט הקרן ובסגנונות של התבנית, ואמור איפה בדיוק הוא נכנס. לפני ההצעה חפש במסמך (חיפוש, לא קריאה מלאה) את מילות המפתח שלה: חפצים, דמויות, מקומות. אם יש סתירה עם סצנה אחרת, כתוב אותה והצע גם שם תיקון. 4. שאל אותי: להכניס כמו שהצעת, לשנות (ואני אגיד מה), לדלג, או לסמן טופל בלי שינוי. אל תשנה טקסט לפני שעניתי. 5. אחרי שהכנסת שינוי, בחר את הטקסט החדש כדי שאקפוץ אליו וסמן אותו במרקר ירוק. לפני שעוברים להערה הבאה, תמיד הורד את המרקר הצהוב ואת הירוק. 6. אחרי שינוי, או כשאמרתי טופל, סמן את ההערה כטופלה (Resolved). אם אי אפשר, הוסף להערה תשובה (Reply) שמתחילה במילה \"טופל\". בדילוג אל תסמן. אל תמחק הערות ואל תשנה טקסט אחר. אם מוצגים סימוני שינויים מול דראפט (מרקר צהוב או טקסט אפור מחוק), בקש ממני קודם ללחוץ \"הסתר\" בלשונית שינויים."
   };
+  var delCmpPending = false, delCmpT = 0;
   function isCmp(n) { return /^השוואה:/.test(n.text || ""); }
   function copyFrom(taId, msgId) {
     var ta = $(taId);
@@ -569,6 +570,7 @@
   function renderNotes(list) {
     if (!notes) { list.innerHTML = '<div class="empty">טוען הערות…</div>'; return; }
     var cmpOpen = notes.filter(function (n) { return isCmp(n) && !n.resolved; });
+    var nCmpAll = notes.filter(isCmp).length;
     if (cardMode && doneNote) {
       list.innerHTML = '<div class="card"><div class="cardtop"><button class="lb" id="cardlist">☰ רשימה</button><span class="cardpos">✓ הוכנס</span></div>' +
         '<div class="cardwhere">' + esc(doneNote.where || "") + '</div>' +
@@ -592,6 +594,9 @@
       (openNotes() ? openNotes() + " הערות פתוחות" : "אין הערות פתוחות") + '</span><span class="sp"></span>' +
       '<label><input type="checkbox" id="notedone"' + (showDone ? " checked" : "") + '> הצג גם שטופלו</label></div>' +
       '<div class="chgrow"><button class="lb" id="cmtview">' + (cmtShow ? "הסתר הערות במסמך" : "הצג הערות גם במסמך") + '</button></div>' +
+      (nCmpAll && W.deleteCompareNotes ? '<div class="chgrow"><button class="lb del' + (delCmpPending ? ' on' : '') + '" id="delcmp">' +
+        (delCmpPending ? 'למחוק ' + nCmpAll + ' הערות השוואה? לחץ שוב לאישור' : '🗑 מחק את כל הערות ההשוואה (' + nCmpAll + ')') + '</button>' +
+        (delCmpPending ? ' <button class="linkbtn" id="delcmpno">ביטול</button>' : '') + '</div>' : '') +
       (synNoteCount ? '<div class="chgrow"><span class="chgstat">' + synNoteCount + ' הערות עזר מוסתרות (להסרה: כלים ← סיום השוואה)</span></div>' : '') + '</div>';
     if (cmpOpen.length) {
       var withSug = cmpOpen.filter(function (n) { return !!sugRaw(n); }).length;
@@ -1287,6 +1292,17 @@
       if ((view === "notes" || view === "compare") && e.target.closest("#notesfold")) { notesFolded = !notesFolded; lsSet("notesFold", notesFolded ? "1" : ""); renderList(); return; }
       if ((view === "notes" || view === "compare") && !e.target.closest(".toolbtn, #smartcopy")) {
         if (e.target.id === "notedone") { showDone = e.target.checked; renderList(); return; }
+        if (e.target.closest("#delcmpno")) { delCmpPending = false; clearTimeout(delCmpT); renderList(); return; }
+        if (e.target.closest("#delcmp")) {
+          // first click asks, second click deletes; the question goes away by itself after a few seconds
+          clearTimeout(delCmpT);
+          if (!delCmpPending) { delCmpPending = true; renderList(); delCmpT = setTimeout(function () { delCmpPending = false; renderList(); }, 6000); return; }
+          delCmpPending = false;
+          markOff().then(function () { cardMode = false; cardEdit = false; return W.deleteCompareNotes(); })
+            .then(function (k) { cardMsg = ""; return refreshNotes().then(function () { renderList(); var st = document.querySelector(".chgctl .chgstat"); if (st) st.textContent = "נמחקו " + k + " הערות השוואה. אפשר לבטל ב-Word עם Cmd+Z."; }); })
+            .catch(showErr);
+          return;
+        }
         if (e.target.closest("#instrsend")) { walkOpen = walkOpen === "instr" ? false : "instr"; renderList(); return; }
         if (e.target.closest("#instropen")) { instrOpen = true; cardMsg = ""; renderList(); var it = $("instrtext"); if (it) it.focus(); return; }
         if (e.target.closest("#instrcancel")) { instrOpen = false; renderList(); return; }
