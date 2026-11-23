@@ -561,7 +561,8 @@
       '<button class="bigbtn" id="cardskip">דלג</button>' +
       '<button class="bigbtn" id="cardok">✓ טופל</button></div>' +
       (instrOpen ? '' : '<button class="bigbtn instrbtn" id="instropen">✎ הוראה ל-Claude</button>') +
-      '<div class="cardfoot"><button class="linkbtn" id="prepshow">הכן הצעות עם Claude</button> · <button class="linkbtn" id="walkshow">מעבר בצ\'אט</button></div>' +
+      (function () { var miss = cmpOpen.filter(function (n) { return !sugRaw(n); }).length;
+        return '<div class="cardfoot">' + (miss ? '<button class="linkbtn" id="prepshow">הכן הצעות ל-' + miss + ' הערות שחסרות</button> · ' : '') + '<button class="linkbtn" id="walkshow">מעבר בצ\'אט</button></div>'; })() +
       promptBox() + '</div>';
     var sy = list.scrollTop;
     list.innerHTML = html;
@@ -607,7 +608,7 @@
         '<button class="bigbtn on" id="instrsend">שלח הוראות ל-Claude</button>' + (walkOpen === "instr" ? promptBox() : '') + '</div>';
       html += '<div class="startbox"><button class="bigbtn on" id="cardstart">▶ עבור על ההשוואות</button>' +
         '<span class="chgstat">' + cmpOpen.length + ' פתוחות' + (withSug ? ', ' + withSug + ' עם הצעה מוכנה' : ', עוד בלי הצעות') + '</span>' +
-        '<div class="cardfoot"><button class="linkbtn" id="prepshow">הכן הצעות עם Claude</button> · <button class="linkbtn" id="walkshow">מעבר בצ\'אט</button></div>' +
+        '<div class="cardfoot">' + (withSug < cmpOpen.length ? '<button class="linkbtn" id="prepshow">הכן הצעות ל-' + (cmpOpen.length - withSug) + ' הערות שחסרות</button> · ' : '') + '<button class="linkbtn" id="walkshow">מעבר בצ\'אט</button></div>' +
         (walkOpen !== "instr" ? promptBox() : '') + '</div>';
     }
     if (!shown.length) {
