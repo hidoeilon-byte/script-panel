@@ -433,6 +433,43 @@
       });
     },
 
+    // Whole comparison material in one text: for every scene heading in the open document, the helper note
+    // (סינופסיס N: / תסריט:) next to the scene's own paragraphs with their styles. kind "s2t" = the script is open.
+    compareBundle: function (kind) {
+      return run(function (ctx) {
+        var ps = ctx.document.body.paragraphs;
+        ps.load("items/style,items/text");
+        var cs = ctx.document.body.getComments();
+        cs.load("items/id,items/content,items/resolved");
+        return ctx.sync().then(function () {
+          var isHelper = kind === "s2t" ? function (t) { return /^סינופסיס \d+:/.test(t); } : function (t) { return /^תסריט:/.test(t); };
+          var helpers = cs.items.filter(function (c) { return isHelper((c.content || "").trim()); });
+          var sr = sceneRanges(ps);
+          var hc = helpers.map(function (c) { var r = c.getRange(); return sr.idx.map(function (i) { return ps.items[i].getRange("Start").compareLocationWith(r); }); });
+          return ctx.sync().then(function () {
+            var byScene = {};
+            helpers.forEach(function (c, k) {
+              var n = hc[k].filter(function (x) { var v = x.value; return v === "Before" || v === "AdjacentBefore" || v === "InsideStart" || v === "Equal"; }).length - 1;
+              if (n >= 0) byScene[n] = (byScene[n] ? byScene[n] + "\n" : "") + (c.content || "").trim().replace(/^(סינופסיס \d+:|תסריט:)\s*/, "");
+            });
+            var here = kind === "s2t" ? "תסריט" : "סינופסיס", other = kind === "s2t" ? "סינופסיס" : "תסריט";
+            var out = [], missing = 0;
+            sr.idx.forEach(function (hi, k) {
+              var end = k + 1 < sr.idx.length ? sr.idx[k + 1] : ps.items.length;
+              var body = ps.items.slice(hi + 1, end).filter(function (p) { return (p.text || "").trim(); })
+                .map(function (p) { return "[" + (p.style || "") + "] " + p.text.trim(); });
+              var hn = byScene[k];
+              if (!hn) missing++;
+              out.push("### סצנה " + (k + 1) + ": " + (ps.items[hi].text || "").trim() + "\n" +
+                "--- " + other + ":\n" + (hn || "(אין הערת עזר לסצנה הזו: ייתכן שהיא קיימת רק ב" + here + ")") + "\n" +
+                "--- " + here + ":\n" + (body.join("\n") || "(ריק)"));
+            });
+            return { text: out.join("\n\n"), scenes: sr.idx.length, helpers: helpers.length, missing: missing };
+          });
+        });
+      });
+    },
+
     // The scene a comment sits in: heading index k, heading paragraph and body paragraphs (until the next heading).
     _noteScene: function (ctx, id) {
       var cs = ctx.document.body.getComments();
