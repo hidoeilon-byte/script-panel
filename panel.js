@@ -542,7 +542,7 @@
       html += '<div class="sugbox"><div class="sughead">' + (sg.kind === "none" ? "Claude: צריך החלטה שלך" : "ההצעה של Claude") +
         (cardEdit ? '' : ' <button class="linkbtn" id="cardedit">ערוך</button>') + '</div>' +
         (cardEdit ? '<textarea id="cardtext" rows="6">' + esc(raw) + '</textarea><div class="toolnote">שורה לכל פעולה: במקום: + יבוא: · מחק: · מחק פסקה: · אחרי: ואחריו שורות [תיאור] / [דמות] / [דיאלוג] · או החלף סצנה: ואחריו כל הסצנה</div>' +
-          '<button class="linkbtn" id="cardcancel">בטל עריכה</button>' : sugHtml(sg)) + '</div>';
+          '<div class="editbtns"><button class="lb on" id="cardsave">שמור עריכה</button> <button class="lb" id="cardcancel">בטל עריכה</button></div>' : sugHtml(sg)) + '</div>';
     } else {
       html += '<div class="sugbox empty2">אין עדיין הצעה להערה הזו.<br><button class="linkbtn" id="prepshow">הכן הצעות עם Claude</button></div>';
     }
@@ -1380,6 +1380,17 @@
         if (e.target.closest("#cardskip")) { stepCmp(1); return; }
         if (e.target.closest("#cardedit")) { cardEdit = true; cardMsg = ""; renderList(); var ct = $("cardtext"); if (ct) ct.focus(); return; }
         if (e.target.closest("#cardcancel")) { cardEdit = false; renderList(); return; }
+        if (e.target.closest("#cardsave")) {
+          // the edited text is saved as a new "הצעה:" reply, so the card (and Claude) use it from now on; nothing goes into the script yet
+          var sid = noteSel, sv = ($("cardtext") ? $("cardtext").value : "").trim();
+          if (!sid || !sv) return;
+          if (!/^הצעה:/.test(sv)) sv = "הצעה:\n" + sv;
+          var sgS = parseSug(sv);
+          if (!sgS || !sgS.ok) { cardMsg = "העריכה לא בפורמט שאפשר להכניס. תקן אותה, או לחץ \"בטל עריכה\"."; renderList(); return; }
+          W.replyNote(sid, sv).then(function () { cardEdit = false; cardMsg = "העריכה נשמרה. אפשר לראות לפני ואחרי, ואז להכניס."; return refreshNotes(); })
+            .then(function () { renderList(); }).catch(showErr);
+          return;
+        }
         if (e.target.closest("#cardok")) {
           var idk = noteSel, snO = snapOrder();
           markOff().then(function () { return W.resolveNote(idk, true); }).then(refreshNotes).then(function () { advanceAfter(snO); }).catch(showErr);
