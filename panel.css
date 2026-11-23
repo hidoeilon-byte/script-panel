@@ -358,7 +358,7 @@ body.noheader #styles, body.noheader .status, body.noheader #locbox { display: n
 .todoitem .fbcap { order: 0; }
 .todoitem .fbdel { margin-inline-start: auto; }
 .todoitem .todoacts > * { order: 9; }
-.todoitem .todoacts .fbcur { order: 1; width: 12px; height: 12px; border-radius: 50%; flex: none; }
+.todoitem .todoacts .fbcur { order: 1; width: 18px; height: 18px; border-radius: 50%; flex: none; }
 .todoitem .todoacts .fbcap { order: 2; }
 .todoitem .todoacts .fbscene { order: 3; }
 .todoitem .todoacts .fbdel { order: 4; margin-inline-start: 0; }
@@ -391,3 +391,8 @@ body.noheader #styles, body.noheader .status, body.noheader #locbox { display: n
 .lb.del { color: #c0392b; }
 .lb.del.on { background: #c0392b; color: #fff; border-color: #c0392b; }
 .editbtns { margin-top: 6px; display: flex; gap: 6px; }
+.todoitem { cursor: default; }
+.stagepicks { order: 5; flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.stagepick { font: inherit; font-size: 11.5px; display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 12px; padding: 2px 8px; cursor: pointer; }
+.stagepick i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.stagepick.on { border-color: var(--ink); font-weight: 600; }
