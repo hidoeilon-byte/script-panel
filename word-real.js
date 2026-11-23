@@ -433,12 +433,83 @@
       });
     },
 
+    // The scene a comment sits in: heading index k, heading paragraph and body paragraphs (until the next heading).
+    _noteScene: function (ctx, id) {
+      var cs = ctx.document.body.getComments();
+      cs.load("items/id");
+      var ps = ctx.document.body.paragraphs;
+      ps.load("items/style,items/text");
+      return ctx.sync().then(function () {
+        var c = cs.items.filter(function (x) { return x.id === id; })[0];
+        if (!c) throw new Error("ההערה לא נמצאה במסמך");
+        var ar = c.getRange();
+        var sr = sceneRanges(ps);
+        if (!sr.idx.length) throw new Error("אין כותרות סצנה במסמך");
+        var hc = sr.idx.map(function (i) { return ps.items[i].getRange("Start").compareLocationWith(ar); });
+        return ctx.sync().then(function () {
+          var k = hc.filter(function (x) { var v = x.value; return v === "Before" || v === "AdjacentBefore" || v === "InsideStart" || v === "Equal"; }).length - 1;
+          if (k < 0) throw new Error("ההערה לא נמצאת בתוך סצנה");
+          var hi = sr.idx[k], end = k + 1 < sr.idx.length ? sr.idx[k + 1] : ps.items.length;
+          return { c: c, k: k, head: ps.items[hi], body: ps.items.slice(hi + 1, end) };
+        });
+      });
+    },
+
+    // Current text of the scene a comment sits in (for the "before" view of a scene rewrite).
+    sceneOfNote: function (id) {
+      var self = this;
+      return run(function (ctx) {
+        return self._noteScene(ctx, id).then(function (s) {
+          return { n: s.k + 1, head: s.head.text, paras: s.body.map(function (p) { return { text: p.text, style: p.style }; }) };
+        });
+      });
+    },
+
+    // Rewrites the whole scene a comment sits in: op.lines replace the body; the heading is kept.
+    // Refuses when other open notes sit in the scene body (deleting the text would delete them).
+    replaceScene: function (id, op) {
+      var self = this;
+      return run(function (ctx) {
+        return self._noteScene(ctx, id).then(function (s) {
+          var bodyRange = s.body.length ? s.body[0].getRange("Whole").expandTo(s.body[s.body.length - 1].getRange("Whole")) : null;
+          var inBody = bodyRange ? bodyRange.getComments() : null;
+          if (inBody) inBody.load("items/id,items/resolved");
+          var anchorIn = null;
+          if (bodyRange) { anchorIn = s.c.getRange().compareLocationWith(bodyRange); }
+          return ctx.sync().then(function () {
+            var others = inBody ? inBody.items.filter(function (x) { return x.id !== id && !x.resolved; }) : [];
+            if (others.length) throw new Error("בגוף הסצנה יש עוד " + others.length + " הערות פתוחות. טפל בהן או סמן אותן טופל, ואז הכנס שוב.");
+            if (anchorIn && /Inside|Equal/.test(anchorIn.value)) throw new Error("ההערה מעוגנת בגוף הסצנה ולא בכותרת, ולכן היא תימחק. בקש מ-Claude לעגן אותה על כותרת הסצנה.");
+            var stamp = String(Date.now()).slice(-7), n = 0;
+            function bm(r, kind) { var nm = "zCard" + kind + stamp + "_" + (n++); r.insertBookmark(nm); return nm; }
+            var oldParas = s.body.map(function (p) { return { text: p.text, style: p.style }; });
+            // the heading stays as it is: the comment (and the synopsis helper note) are anchored on it
+            var lines = op.lines.filter(function (ln) { return ln.style !== "כותרת סצנה"; }), oldHead = null;
+            if (!lines.length) throw new Error("השכתוב ריק");
+            var base = s.head, names = [], green = [];
+            lines.forEach(function (ln) {
+              base = base.insertParagraph(ln.text, "After");
+              base.style = ln.style;
+              var rc = base.getRange("Content");
+              rc.font.highlightColor = "#00FF00";
+              green.push(rc);
+              names.push(bm(rc, "G"));
+            });
+            s.body.forEach(function (p) { p.delete(); });
+            var hb = bm(s.head.getRange("Content"), "U");
+            if (green.length) green[0].select("Select");
+            return ctx.sync().then(function () { return [{ op: "scene", bm: hb, bms: names, old: oldParas, oldHead: oldHead }]; });
+          });
+        });
+      });
+    },
+
     // Puts the text back the way it was before applySuggestion, using its undo info (last change first).
     undoSuggestion: function (undo) {
       return run(function (ctx) {
         var rs = {};
         undo.forEach(function (u) {
-          (u.bms || (u.bm ? [u.bm] : [])).forEach(function (nm) { rs[nm] = ctx.document.getBookmarkRangeOrNullObject(nm); rs[nm].load("isNullObject"); });
+          (u.bms || []).concat(u.bm ? [u.bm] : []).forEach(function (nm) { rs[nm] = ctx.document.getBookmarkRangeOrNullObject(nm); rs[nm].load("isNullObject"); });
         });
         return ctx.sync().then(function () {
           var missing = 0;
@@ -451,6 +522,14 @@
               if ((r = ok(u.bm))) {
                 var np = r.paragraphs.getFirst().insertParagraph(u.text, u.where === "after" ? "After" : "Before");
                 np.style = u.style;
+              }
+            } else if (u.op === "scene") {
+              (u.bms || []).forEach(function (nm) { if ((r = ok(nm))) r.paragraphs.getFirst().delete(); });
+              if ((r = ok(u.bm))) {
+                var hp = r.paragraphs.getFirst();
+                if (u.oldHead !== null && u.oldHead !== undefined) hp.insertText(u.oldHead, "Replace");
+                var b2 = hp;
+                u.old.forEach(function (op) { b2 = b2.insertParagraph(op.text, "After"); b2.style = op.style; });
               }
             } else (u.bms || []).forEach(function (nm) { if ((r = ok(nm))) r.paragraphs.getFirst().delete(); });
           });
