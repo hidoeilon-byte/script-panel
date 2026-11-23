@@ -1300,7 +1300,7 @@
           if (!delCmpPending) { delCmpPending = true; renderList(); delCmpT = setTimeout(function () { delCmpPending = false; renderList(); }, 6000); return; }
           delCmpPending = false;
           markOff().then(function () { cardMode = false; cardEdit = false; return W.deleteCompareNotes(); })
-            .then(function (k) { cardMsg = ""; return refreshNotes().then(function () { renderList(); var st = document.querySelector(".chgctl .chgstat"); if (st) st.textContent = "נמחקו " + k + " הערות השוואה. אפשר לבטל ב-Word עם Cmd+Z."; }); })
+            .then(function (k) { cardMsg = ""; return refreshNotes().then(function () { renderList(); var st = document.querySelector(".chgctl .chgstat"); if (st) st.textContent = "נמחקו " + k.done + " הערות השוואה" + (k.failed ? ", " + k.failed + " לא נמחקו (אפשר למחוק אותן ב-Word: קליק ימני על ההערה ← מחק)" : "") + "."; }); })
             .catch(showErr);
           return;
         }

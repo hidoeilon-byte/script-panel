@@ -299,15 +299,35 @@
       });
     },
     // deletes every comment that starts with "השוואה:" (with its replies); other comments stay. Returns how many were deleted.
+    // Word on Mac throws GeneralException when many comments are deleted in one batch,
+    // so each one is deleted on its own; a comment that still refuses is reopened (resolved=false) and tried once more.
     deleteCompareNotes: function () {
+      var one = function (id, reopen) {
+        return run(function (ctx) {
+          var cs = ctx.document.body.getComments();
+          cs.load("items/id");
+          return ctx.sync().then(function () {
+            var c = cs.items.filter(function (x) { return x.id === id; })[0];
+            if (!c) return true;
+            if (reopen) { c.resolved = false; }
+            return ctx.sync().then(function () { c.delete(); return ctx.sync(); }).then(function () { return true; });
+          });
+        });
+      };
       return run(function (ctx) {
         var cs = ctx.document.body.getComments();
-        cs.load("items/content");
+        cs.load("items/id,items/content");
         return ctx.sync().then(function () {
-          var hit = cs.items.filter(function (c) { return /^\s*השוואה:/.test(c.content || ""); });
-          hit.forEach(function (c) { c.delete(); });
-          return ctx.sync().then(function () { return hit.length; });
+          return cs.items.filter(function (c) { return /^\s*השוואה:/.test(c.content || ""); }).map(function (c) { return c.id; });
         });
+      }).then(function (ids) {
+        var done = 0, failed = 0;
+        return ids.reduce(function (p, id) {
+          return p.then(function () {
+            return one(id, false).catch(function () { return one(id, true); })
+              .then(function () { done++; }, function () { failed++; });
+          });
+        }, Promise.resolve()).then(function () { return { done: done, failed: failed }; });
       });
     },
     resolveNote: function (id, done) {
