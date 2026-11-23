@@ -449,6 +449,16 @@
   }
   // after a note was handled: go to the next open note that came after it in the order before the change
   function snapOrder() { return { ids: openCmp().map(function (n) { return n.id; }), cur: noteSel }; }
+  // a note that is no longer in the document (deleted by hand, by "מחק את כל הערות ההשוואה", or rewritten by Claude):
+  // the list is refreshed and the card moves on, instead of a stuck "not saved" message
+  function noteFail(er, snap) {
+    var m = er && er.message ? er.message : String(er);
+    if (/לא נמצאה במסמך/.test(m)) {
+      cardMsg = "ההערה הזו כבר לא במסמך (כנראה נמחקה), אז עברתי לבאה.";
+      return refreshNotes().then(function () { advanceAfter(snap); renderList(); });
+    }
+    cardMsg = "לא נשמר: " + m; renderList();
+  }
   function advanceAfter(snap) {
     var open = openCmp().map(function (n) { return n.id; });
     var k = snap.ids.indexOf(snap.cur);
@@ -1325,7 +1335,7 @@
           cardMsg = "שומר…"; renderList();
           W.replyNote(did, "הוראה: תתאים את התסריט למה שכתוב בסינופסיס בנקודה הזו. כתוב את זה כפעולות שאפשר להכניס (במקום/יבוא, מחק, מחק פסקה, אחרי + שורות עם סגנון), או כ\"החלף סצנה:\" אם צריך שכתוב של כל הסצנה.")
             .then(function () { cardMsg = ""; return refreshNotes().then(function () { advanceAfter(snD); }); })
-            .catch(function (er) { cardMsg = "לא נשמר: " + (er && er.message ? er.message : er); renderList(); });
+            .catch(function (er) { noteFail(er, snD); });
           return;
         }
         if (e.target.closest("#instrsave")) {
@@ -1335,7 +1345,7 @@
           W.replyNote(iid, "הוראה: " + txt.replace(/\s*\n\s*/g, " ")).then(function () {
             cardMsg = "";
             return refreshNotes().then(function () { advanceAfter(snI); });
-          }).catch(function (er) { cardMsg = "לא נשמר: " + (er && er.message ? er.message : er); renderList(); });
+          }).catch(function (er) { noteFail(er, snI); });
           return;
         }
         if (e.target.closest("#doneok")) {
