@@ -1638,7 +1638,7 @@
     }
     if (locOpen) {
       html += '<div class="locman">' + bank.map(function (l) {
-        return '<div class="lmrow"><span>' + esc(l.n) + '</span><small>' + (l.c ? l.c + " סצנות" : "ידני") + '</small>' +
+        return '<div class="lmrow"><span class="lmloc" data-loc="' + esc(l.n) + '" title="הכנס לכותרת">' + esc(l.n) + '</span><small>' + (l.c ? l.c + " סצנות" : "ידני") + '</small>' +
           (l.custom ? '<button class="icon" data-delloc="' + esc(l.n) + '" title="הסר מהבנק">✕</button>' : '') + '</div>';
       }).join("") + '<input class="newloc" placeholder="+ לוקיישן חדש לבנק (Enter)"></div>';
     }
@@ -1659,8 +1659,18 @@
       var c = lastPara || { text: "" };
       var p = parseHead(c.text);
       var b;
-      if ((b = e.target.closest("[data-type]"))) { W.setParaText(b.dataset.type + ". ").then(function () { locSig = ""; return W.curPara().then(updateLocBox); }).catch(showErr); return; }
-      if ((b = e.target.closest("[data-loc]"))) { setHead(p.type, b.dataset.loc); return; }
+      if ((b = e.target.closest("[data-type]"))) {
+        // a location picked before the type stays, and the time buttons come next
+        if (p.loc) { setHead(b.dataset.type, p.loc); return; }
+        W.setParaText(b.dataset.type + ". ").then(function () { locSig = ""; return W.curPara().then(updateLocBox); }).catch(showErr); return;
+      }
+      if ((b = e.target.closest("[data-loc]"))) {
+        // the bank list can be open while the cursor is elsewhere: never overwrite a paragraph that is not a scene heading
+        if (!lastPara || lastPara.style !== SCENE) { showErr("שים את הסמן על כותרת סצנה, ואז לחץ על הלוקיישן."); return; }
+        if (b.classList.contains("lmloc")) locOpen = false;
+        if (!p.type) { W.setParaText(b.dataset.loc).then(function () { locSig = ""; return W.curPara().then(updateLocBox); }).catch(showErr); return; }
+        setHead(p.type, b.dataset.loc, p.hasDash && p.time ? p.time : undefined); return;
+      }
       if ((b = e.target.closest("[data-time]"))) { setHead(p.type, p.loc, b.dataset.time); return; }
       if ((b = e.target.closest("[data-addloc]"))) {
         if (customLocs.indexOf(b.dataset.addloc) < 0) customLocs.push(b.dataset.addloc);
