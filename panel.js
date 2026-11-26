@@ -53,6 +53,7 @@
 
   showSyn = lsGet("showSyn", "1") !== "0";
   view = lsGet("view", "struct");
+  if (view === "tools") view = "struct";
   if (view === "notes") view = "compare";
   if (view === "heads" || view === "feedback") view = "struct";
   lastSub[groupOf(view)] = view;
@@ -167,13 +168,26 @@
     { g: "script", t: "תסריט", subs: [["struct", "מבנה"]] },
     { g: "notes", t: "הערות", subs: [["todo", "שלי"], ["feedback", "משוב"]] },
     { g: "comparisons", t: "השוואות", subs: [["changes", "דראפטים"], ["compare", "סינופסיס"]] },
-    { g: "analysis", t: "ניתוח הסרט", subs: [["beats", "ביטים"], ["chars", "דמויות"]] },
-    { g: "tools", t: "כלים", subs: [["tools", "כלים"]] }
+    { g: "analysis", t: "ניתוח הסרט", subs: [["beats", "ביטים"], ["chars", "דמויות"]] }
   ];
   function groupOf(v) {
     return v === "struct" || v === "heads" ? "script" : v === "notes" || v === "todo" || v === "feedback" || v === "answers" ? "notes" :
-      v === "changes" || v === "compare" ? "comparisons" : v === "beats" || v === "chars" ? "analysis" : "tools";
+      v === "changes" || v === "compare" ? "comparisons" : v === "beats" || v === "chars" || v === "acts" ? "analysis" : "script";
   }
+  // the tools that are rarely used live in the ⋯ menu of the top bar
+  var moreOpen = false;
+  var MORE_ITEMS = [
+    ["acts", "סימון פעולות", "Claude מזהה כל פעולה פיזית, וכל דמות מסומנת בצבע משלה."],
+    ["force", "דראפט חדש עכשיו", "שומר דראפט חדש בלי לחכות לשינוי מהותי."],
+    ["prevdraft", "דראפט קודם", "פותח את הדראפט הקודם לקריאה, לצד הקובץ."],
+    ["check", "לפני הגשה", "בודק את הפורמט לפני שליחה לקרן."],
+    ["new", "תסריט חדש", "פותח תסריט חדש בפורמט הקרן."]
+  ];
+  document.addEventListener("click", function (e) {
+    if (!moreOpen || !e.target.closest) return;
+    if (e.target.closest(".moremenu") || e.target.closest("#more")) return;
+    moreOpen = false; renderBar();
+  }, true);
   function renderBar() {
     var cur = groupOf(view), gb = GROUPS.filter(function (x) { return x.g === cur; })[0];
     $("bar").innerHTML =
@@ -190,6 +204,10 @@
       (view === "heads" ? '<label><input type="checkbox" id="showsyn"' + (showSyn ? " checked" : "") + '> תקצירים</label>' :
         view === "struct" ? '<button class="icon" id="fold" title="כווץ או פתח את כל הסיקוונסים">' + (allCollapsed() ? "⊞" : "⊟") + '</button>' : "") +
       '<button class="icon selask" id="selask" title="שאל את Claude רק על הטקסט המסומן" aria-label="שאל על המסומן">✳</button>' +
+      '<button class="icon" id="more" title="עוד פעולות" aria-label="עוד פעולות">⋯</button>' +
+      (moreOpen ? '<div class="moremenu">' + MORE_ITEMS.map(function (it) {
+        return '<button class="moreitem" data-cmd="' + it[0] + '"><b>' + it[1] + '</b><span>' + it[2] + '</span></button>';
+      }).join("") + '</div>' : '') +
       '<button class="icon" id="refresh" title="רענון" aria-label="רענון">↻</button>';
   }
 
@@ -1138,6 +1156,7 @@
     var list = $("scenes");
     if (view === "changes") { list.className = "view-changes"; renderChanges(list); return; }
     if (view === "tools") { list.className = "view-tools"; renderTools(list); return; }
+    if (view === "acts") { list.className = "view-tools"; list.innerHTML = '<div class="toolgrp"><div class="toolh">סימון פעולות</div><div class="toolnote">Claude מזהה כל פעולה פיזית של הדמויות בסצנות שבחרת, וכל דמות מסומנת במרקר בצבע משלה.</div>' + actsBox() + '</div>'; return; }
     if (view === "beats") { list.className = "view-tools"; list.innerHTML = '<div class="toolgrp"><div class="toolh">ניתוח ביטים</div><div class="toolnote">Claude מחלק כל סצנה לביטים לפי התפניות בדינמיקה, צובע כל ביט, וכותב מה כל דמות באמת רוצה להגיד.</div>' + beatsBox() + '</div>'; return; }
     if (view === "chars") { list.className = "view-tools"; list.innerHTML = '<div class="toolgrp"><div class="toolh">ניתוח דמויות</div><div class="toolnote">לכל דמות: מה היא רוצה ומה חוסם אותה, לאורך כל הסרט ובכל סצנה.</div>' + charsBox() + '</div>'; return; }
     if (view === "notes") { view = "compare"; lsSet("view", view); renderList(); return; }
@@ -1232,10 +1251,10 @@
   }
   function render() {
     if (!selWatch && W.watchSelection) { selWatch = true; W.watchSelection(function (t) { selCache = t; }); }
-    document.body.classList.toggle("noheader", view === "notes" || view === "compare" || view === "todo" || view === "feedback" || view === "beats" || view === "chars");
+    document.body.classList.toggle("noheader", view === "notes" || view === "compare" || view === "todo" || view === "feedback" || view === "beats" || view === "chars" || view === "acts");
     renderBar();
     renderPlotBar();
-    var hideBars = view === "changes" || view === "tools" || view === "compare" || view === "notes" || view === "todo" || view === "feedback" || view === "answers" || view === "beats" || view === "chars";
+    var hideBars = view === "changes" || view === "tools" || view === "compare" || view === "notes" || view === "todo" || view === "feedback" || view === "answers" || view === "beats" || view === "chars" || view === "acts";
     $("markbar").hidden = hideBars;
     if (hideBars) $("plotbar").hidden = true;
     renderList();
@@ -1291,6 +1310,16 @@
     $("bar").addEventListener("click", function (e) {
       var sa = e.target.closest("#selask");
       if (sa) { askSelection(sa); return; }
+      if (e.target.closest("#more")) { moreOpen = !moreOpen; renderBar(); return; }
+      var mi = e.target.closest(".moreitem");
+      if (mi) {
+        var mc = mi.dataset.cmd;
+        if (mc === "acts") { moreOpen = false; view = "acts"; lsSet("view", "struct"); editing = -1; render(); return; }
+        mi.querySelector("span").textContent = "נשלח… (עד 2 שניות)";
+        W.sendRequest(mc, "").catch(showErr);
+        setTimeout(function () { moreOpen = false; renderBar(); }, 1200);
+        return;
+      }
       if (e.target.closest("#barfold")) {
         var cmp = !document.body.classList.contains("compact");
         document.body.classList.toggle("compact", cmp); lsSet("compact", cmp ? "1" : "");
@@ -1734,7 +1763,7 @@
         }
         return;
       }
-      if (view === "tools" || view === "compare" || view === "beats" || view === "chars") {
+      if (view === "tools" || view === "compare" || view === "beats" || view === "chars" || view === "acts") {
         if (e.target.closest("#charsnew")) { charsSetupOpen = true; renderList(); return; }
         if (e.target.closest("#charscopy")) { copyFrom("charstext", "charscopied"); return; }
         if (e.target.closest("#charsapply")) { applyChars(); return; }
