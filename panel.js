@@ -335,6 +335,7 @@
   var smartBundle = { ready: false, msg: "", text: "", scenes: 0, missing: 0 };
   // ---------- beats: pick scenes, copy the request to Claude for Word, paste the answer back and mark it
   var beatsOpen = false;
+  var beatsPickOpen = false;
   var beatSel = {};        // scene index -> true
   var BEAT_COLORS = { "שינוי מצב": "DarkBlue", "צחוק": "Pink", "התקרבות": "Blue", "התרככות": "Gray25" };
   var BEATS_PROMPT = "ניתוח ביטים רגשיים בסצנות. פתח את המסמך הפתוח ב-Word, ומצא את הסצנות הבאות לפי הכותרת שלהן. לכל סצנה: כתוב משפט אחד על המנעד הרגשי שלה, ואיפה הזוג אוהב ואיפה הוא משלים. סמן במדויק רגעים של: שינוי מצב, צחוק של הדמות, התקרבות, והתרככות. אל תשנה את המסמך ואל תכתוב הערות. החזר רשימה: שורה לכל סצנה שמתחילה ב\"סצנה: \" עם שם הסצנה ומשפט המנעד, ואחריה שורה לכל סימון בפורמט:\nסוג | ציטוט מדויק מהטקסט (עד 100 תווים, מילה במילה)\nסוגים מותרים: שינוי מצב, צחוק, התקרבות, התרככות.\n\nהסצנות:\n";
@@ -342,13 +343,15 @@
     var names = scenes.map(function (s, i) { return beatSel[i] ? "- " + (s.h || "סצנה " + (i + 1)) : ""; }).filter(Boolean).join("\n");
     return BEATS_PROMPT + (names || "(עוד לא נבחרו סצנות)");
   }
+  function beatsCount() { return Object.keys(beatSel).filter(function (k) { return beatSel[k]; }).length; }
   function beatsBox() {
     var rows = scenes.map(function (s, i) {
-      return '<label class="beatrow"><input type="checkbox" class="beatcb" data-i="' + i + '"' + (beatSel[i] ? " checked" : "") + '> ' + esc(s.h || ("סצנה " + (i + 1))) + '</label>';
+      return '<label class="beatrow"><input type="checkbox" class="beatcb" data-i="' + i + '"' + (beatSel[i] ? " checked" : "") + '><span>' + esc(s.h || ("סצנה " + (i + 1))) + '</span></label>';
     }).join("");
-    return '<div class="promptbox"><div class="toolh">בחירת סצנות לניתוח</div>' +
-      (scenes.length ? '<div class="beatlist">' + rows + '</div><div class="toolnote"><button class="linkbtn" id="beatsall">בחר הכל</button> · <button class="linkbtn" id="beatsnone">נקה בחירה</button></div>'
-        : '<div class="toolnote">אין סצנות בתסריט. פתח את המסמך ורענן.</div>') +
+    var pick = '<button class="beatfold" id="beatsfold">' + (beatsPickOpen ? "▴" : "▾") + ' בחירת סצנות · נבחרו <span id="beatscount">' + beatsCount() + '</span> מתוך ' + scenes.length + '</button>' +
+      (beatsPickOpen ? (scenes.length ? '<div class="beatlist">' + rows + '</div><div class="beatbar"><button class="linkbtn" id="beatsall">בחר הכל</button><button class="linkbtn" id="beatsnone">נקה בחירה</button></div>'
+        : '<div class="toolnote">אין סצנות בתסריט. פתח את המסמך ורענן.</div>') : '');
+    return '<div class="promptbox">' + pick +
       '<div class="toolh">הבקשה ל-Claude (בחלון התסריט)</div>' +
       '<textarea id="beatstext" readonly rows="5">' + esc(buildBeatsPrompt()) + '</textarea>' +
       '<button class="lb on" id="beatscopy">העתק</button> <span class="chgstat" id="beatscopied"></span>' +
@@ -1511,11 +1514,14 @@
           scenes.forEach(function (s, i) { beatSel[i] = allOn; });
           document.querySelectorAll(".beatcb").forEach(function (cb) { cb.checked = allOn; });
           $("beatstext").value = buildBeatsPrompt();
+          $("beatscount").textContent = beatsCount();
           return;
         }
+        if (e.target.closest("#beatsfold")) { beatsPickOpen = !beatsPickOpen; renderList(); return; }
         if (e.target.classList && e.target.classList.contains("beatcb")) {
           beatSel[+e.target.dataset.i] = e.target.checked;
           $("beatstext").value = buildBeatsPrompt();
+          $("beatscount").textContent = beatsCount();
           return;
         }
         var tb = e.target.closest(".toolbtn");
