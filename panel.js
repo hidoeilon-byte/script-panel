@@ -340,13 +340,13 @@
   var BEAT_COLORS = { "שינוי מצב": "DarkBlue", "צחוק": "Pink", "התקרבות": "Blue", "התרככות": "Gray25" };
   var BEATS_PROMPT = "ניתוח ביטים רגשיים בסצנות. פתח את המסמך הפתוח ב-Word, ומצא את הסצנות הבאות לפי הכותרת שלהן. לכל סצנה: כתוב משפט אחד על המנעד הרגשי שלה, ואיפה הזוג אוהב ואיפה הוא משלים. סמן במדויק רגעים של: שינוי מצב, צחוק של הדמות, התקרבות, והתרככות. אל תשנה את המסמך ואל תכתוב הערות. החזר רשימה: שורה לכל סצנה שמתחילה ב\"סצנה: \" עם שם הסצנה ומשפט המנעד, ואחריה שורה לכל סימון בפורמט:\nסוג | ציטוט מדויק מהטקסט (עד 100 תווים, מילה במילה)\nסוגים מותרים: שינוי מצב, צחוק, התקרבות, התרככות.\n\nהסצנות:\n";
   function buildBeatsPrompt() {
-    var names = scenes.map(function (s, i) { return beatSel[i] ? "- " + (s.h || "סצנה " + (i + 1)) : ""; }).filter(Boolean).join("\n");
+    var names = scenes.map(function (s, i) { return beatSel[i] ? "- סצנה " + (i + 1) + ": " + (s.h || "") : ""; }).filter(Boolean).join("\n");
     return BEATS_PROMPT + (names || "(עוד לא נבחרו סצנות)");
   }
   function beatsCount() { return Object.keys(beatSel).filter(function (k) { return beatSel[k]; }).length; }
   function beatsBox() {
     var rows = scenes.map(function (s, i) {
-      return '<label class="beatrow"><input type="checkbox" class="beatcb" data-i="' + i + '"' + (beatSel[i] ? " checked" : "") + '><span>' + esc(s.h || ("סצנה " + (i + 1))) + '</span></label>';
+      return '<label class="beatrow"><input type="checkbox" class="beatcb" data-i="' + i + '"' + (beatSel[i] ? " checked" : "") + '><span><b>' + (i + 1) + '.</b> ' + esc(s.h || ("סצנה " + (i + 1))) + '</span></label>';
     }).join("");
     var pick = '<button class="beatfold" id="beatsfold">' + (beatsPickOpen ? "▴" : "▾") + ' בחירת סצנות · נבחרו <span id="beatscount">' + beatsCount() + '</span> מתוך ' + scenes.length + '</button>' +
       (beatsPickOpen ? (scenes.length ? '<div class="beatlist">' + rows + '</div><div class="beatbar"><button class="linkbtn" id="beatsall">בחר הכל</button><button class="linkbtn" id="beatsnone">נקה בחירה</button></div>'
