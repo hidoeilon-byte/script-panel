@@ -451,3 +451,5 @@ body.noheader #styles, body.noheader .status, body.noheader #locbox { display: n
 .strow > .scask { position:absolute; top:6px; left:6px; z-index:2; }
 .strow .srdot { margin-top: 0; align-self: center; }
 .strow .markpick { flex-basis: 100%; padding: 4px 0 2px; }
+.icon.selask { color:#d97757; font-weight:700; }
+.icon.selask.wide { width:auto; padding:0 8px; font-size:12px; white-space:nowrap; }

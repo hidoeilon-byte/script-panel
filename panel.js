@@ -189,6 +189,7 @@
       '<span class="sp"></span>' +
       (view === "heads" ? '<label><input type="checkbox" id="showsyn"' + (showSyn ? " checked" : "") + '> תקצירים</label>' :
         view === "struct" ? '<button class="icon" id="fold" title="כווץ או פתח את כל הסיקוונסים">' + (allCollapsed() ? "⊞" : "⊟") + '</button>' : "") +
+      '<button class="icon selask" id="selask" title="שאל את Claude רק על הטקסט המסומן" aria-label="שאל על המסומן">✳</button>' +
       '<button class="icon" id="refresh" title="רענון" aria-label="רענון">↻</button>';
   }
 
@@ -1218,7 +1219,19 @@
     list.innerHTML = html;
   }
 
+  // the selected text, kept up to date by Word, so the ✳ button copies in the same click
+  var selCache = "", selWatch = false;
+  function askSelection(btn) {
+    var t = (selCache || "").replace(/\r/g, "\n").trim();
+    var flash = function (txt, ms) { var old = btn.textContent; btn.textContent = txt; btn.classList.add("wide"); setTimeout(function () { btn.textContent = old; btn.classList.remove("wide"); }, ms); };
+    if (!t) { flash("סמן קודם טקסט", 1800); return; }
+    var msg = "ענה רק על הקטע הבא מתוך התסריט. אל תקרא את שאר המסמך ואל תשנה אותו. ענה בצ'אט בלבד, קצר וממוקד.\nהקטע:\n«" + t + "»\nהשאלה שלי: ";
+    var done = function () { flash("הועתק ✓", 1500); };
+    try { if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(msg).then(done, function () { fallbackCopy(msg); done(); }); return; } } catch (er) {}
+    fallbackCopy(msg); done();
+  }
   function render() {
+    if (!selWatch && W.watchSelection) { selWatch = true; W.watchSelection(function (t) { selCache = t; }); }
     document.body.classList.toggle("noheader", view === "notes" || view === "compare" || view === "todo" || view === "feedback" || view === "beats" || view === "chars");
     renderBar();
     renderPlotBar();
@@ -1276,6 +1289,8 @@
   // ---------- events
   function wire() {
     $("bar").addEventListener("click", function (e) {
+      var sa = e.target.closest("#selask");
+      if (sa) { askSelection(sa); return; }
       if (e.target.closest("#barfold")) {
         var cmp = !document.body.classList.contains("compact");
         document.body.classList.toggle("compact", cmp); lsSet("compact", cmp ? "1" : "");

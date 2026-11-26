@@ -776,6 +776,19 @@
       });
     },
 
+    // keep the panel told about the selected text (plain text), every time the selection changes
+    watchSelection: function (cb) {
+      try {
+        var read = function () {
+          Office.context.document.getSelectedDataAsync(Office.CoercionType.Text, function (r) {
+            if (r.status === "succeeded") cb(String(r.value || ""));
+          });
+        };
+        Office.context.document.addHandlerAsync(Office.EventType.DocumentSelectionChanged, read);
+        read();
+      } catch (e) {}
+    },
+
     loadChars: function () {
       try { return Office.context.document.settings.get("scenePanel.chars") || []; } catch (e) { return []; }
     },
