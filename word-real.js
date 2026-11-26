@@ -776,6 +776,13 @@
       });
     },
 
+    loadChars: function () {
+      try { return Office.context.document.settings.get("scenePanel.chars") || []; } catch (e) { return []; }
+    },
+    saveChars: function (list) {
+      try { var st = Office.context.document.settings; st.set("scenePanel.chars", list); st.saveAsync(); } catch (e) {}
+    },
+
     loadActs: function () {
       try { return Office.context.document.settings.get("scenePanel.acts") || null; } catch (e) { return null; }
     },

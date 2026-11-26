@@ -421,3 +421,14 @@ body.noheader #styles, body.noheader .status, body.noheader #locbox { display: n
 .beattop { display:flex; gap:8px; margin-bottom:8px; }
 .actrow { display:flex; align-items:center; gap:8px; padding:6px 4px; border-bottom:1px solid #f0f0f0; font-size:13px; }
 .actrow span:last-child { color:#666; margin-inline-start:auto; }
+
+/* characters analysis */
+.charcard { border:1px solid #e3e3e3; border-radius:10px; margin-bottom:8px; background:#fff; overflow:hidden; }
+.charhead { display:flex; flex-direction:column; gap:3px; width:100%; text-align:right; background:none; border:none; padding:9px 10px; font:inherit; font-weight:700; font-size:14px; cursor:pointer; }
+.charhead span { font-weight:400; font-size:12px; color:#555; line-height:1.4; }
+.charbody { padding:0 10px 10px; }
+.charf { display:flex; flex-direction:column; gap:2px; padding:6px 0; border-top:1px solid #f0f0f0; font-size:13px; line-height:1.45; }
+.charf b { font-size:12px; color:#666; }
+.charsc { display:flex; flex-direction:column; gap:2px; width:100%; text-align:right; background:#fafafa; border:1px solid #eee; border-radius:8px; padding:6px 8px; margin-bottom:5px; font:inherit; font-size:13px; line-height:1.4; cursor:pointer; }
+.charsc:hover { border-color:#ccc; }
+.charsc i { font-style:normal; color:#888; }

@@ -30,7 +30,7 @@
   var curScene = -1;
   var editing = -1;
   var view = "heads";   // heads | struct
-  var lastSub = { script: "struct", notes: "todo", comparisons: "changes", tools: "tools" };
+  var lastSub = { script: "struct", notes: "todo", comparisons: "changes", analysis: "beats", tools: "tools" };
   var STAGES = ["מחולל", "אקפוזיציה", "מפנה 1", "מפנה 2", "שיא", "התרה"];
   // older names of the parts map to the short ones, so nothing saved before breaks
   var STAGE_OLD = { "אירוע מחולל": "מחולל", "אקספוזיציה": "אקפוזיציה", "נקודת מפנה": "מפנה 1", "נקודת מפנה שנייה": "מפנה 2", "נקודת שיא": "שיא" };
@@ -167,11 +167,12 @@
     { g: "script", t: "תסריט", subs: [["struct", "מבנה"]] },
     { g: "notes", t: "הערות", subs: [["todo", "שלי"], ["feedback", "משוב"]] },
     { g: "comparisons", t: "השוואות", subs: [["changes", "דראפטים"], ["compare", "סינופסיס"]] },
+    { g: "analysis", t: "ניתוח הסרט", subs: [["beats", "ביטים"], ["chars", "דמויות"]] },
     { g: "tools", t: "כלים", subs: [["tools", "כלים"]] }
   ];
   function groupOf(v) {
     return v === "struct" || v === "heads" ? "script" : v === "notes" || v === "todo" || v === "feedback" || v === "answers" ? "notes" :
-      v === "changes" || v === "compare" ? "comparisons" : "tools";
+      v === "changes" || v === "compare" ? "comparisons" : v === "beats" || v === "chars" ? "analysis" : "tools";
   }
   function renderBar() {
     var cur = groupOf(view), gb = GROUPS.filter(function (x) { return x.g === cur; })[0];
@@ -310,8 +311,7 @@
       { cmd: "smart_t2s", t: "תסריט ← סינופסיס", d: "מה שקורה בתסריט וחסר או שונה בסינופסיס. נפתח הסינופסיס וההערות נכנסות אליו." },
       { cmd: "smartclear", t: "סיום השוואה", d: "מוחק את הערות העזר. הערות ההשוואה נשארות." }
     ], note: "1. לוחצים על כיוון. 2. מעתיקים את הבקשה שמופיעה כאן. 3. מדביקים ל-Claude ב-Word (בחלון של המסמך שמקבל את ההערות). 4. ההבדלים מופיעים בלשונית הערות." },
-    { h: "ניתוח ביטים", items: [
-      { cmd: "beats", t: "ניתוח ביטים בסצנות", d: "בוחרים סצנות. Claude מחלק כל סצנה לביטים לפי התפניות בדינמיקה, וכותב מה כל דמות באמת רוצה להגיד." },
+    { h: "פעולות", items: [
       { cmd: "acts", t: "סימון פעולות", d: "Claude מזהה כל פעולה פיזית של הדמויות בסצנות שבחרת, וכל דמות מסומנת במרקר בצבע משלה." }
     ] },
     { h: "דראפטים", items: [
@@ -431,6 +431,84 @@
     if (e.target.id === "beatsreply") beatsReplyText = e.target.value;
     if (e.target.id === "actsreply") actsReplyText = e.target.value;
   });
+  // ---------- characters: what each character wants and what blocks it, over the whole film and scene by scene
+  var charsData = null;        // [{name, f:{רצון, מכשול, צורך, פחד, קשת, שיפור}, sc:[{sn, want, block}]}] kept in the document settings
+  var charsReplyText = "";
+  var charsStat = "";
+  var charsSetupOpen = null;
+  var charOpen = {};
+  var CHAR_FIELDS = [["רצון", "רצון"], ["מכשול", "מכשול (מבחוץ)"], ["צורך", "צורך פנימי"], ["פחד", "פחד (מבפנים)"], ["קשת", "קשת השינוי"], ["שיפור", "לשיפור"]];
+  var CHARS_PROMPT = "ניתוח דמויות לכל הסרט. קרא את כל התסריט שבמסמך הפתוח ב-Word, מההתחלה עד הסוף, לפני שאתה כותב. לכל דמות מרכזית (דמות שמופיעה ביותר מסצנה אחת) כתוב: רצון: מה היא רוצה להשיג לאורך הסרט. מכשול: מה חוסם אותה מבחוץ (אנשים, נסיבות). צורך: מה היא באמת צריכה מתחת לרצון. פחד: מה חוסם אותה מבפנים (פחד, פגם, אמונה שגויה). קשת: מי היא בהתחלה, מי היא בסוף, ובאיזו סצנה היא משתנה. שיפור: איפה הרצון או המכשול לא ברורים בתסריט, ומה כדאי לחזק, עד שני משפטים. אחר כך, לכל סצנה שהדמות מופיעה בה: מה היא רוצה בסצנה הזו ומה חוסם אותה שם. מספרי הסצנות לפי הרשימה שבסוף ההודעה. אל תשנה את המסמך ואל תכתוב הערות. החזר רק את הרשימה, בפורמט הזה בדיוק, שורה לכל שדה:\nדמות | שם הדמות\nרצון | ...\nמכשול | ...\nצורך | ...\nפחד | ...\nקשת | ...\nשיפור | ...\nסצנה N | רוצה: ... | חוסם: ...\nשורת סצנה לכל סצנה שהדמות מופיעה בה, לפי הסדר, ואז הדמות הבאה. אל תשתמש בסימן | בתוך הטקסט.\n\nרשימת הסצנות:\n";
+  function buildCharsPrompt() {
+    return CHARS_PROMPT + scenes.map(function (s, i) { return (i + 1) + ". " + (s.h || ""); }).join("\n");
+  }
+  function charsBox() {
+    if (charsData === null) charsData = (W.loadChars && W.loadChars()) || [];
+    var cards = charsData.map(function (c) {
+      var open = !!charOpen[c.name];
+      var body = "";
+      if (open) {
+        body = '<div class="charbody">' + CHAR_FIELDS.map(function (f) {
+          return c.f[f[0]] ? '<div class="charf"><b>' + f[1] + '</b><span>' + esc(c.f[f[0]]) + '</span></div>' : '';
+        }).join("") +
+          (c.sc && c.sc.length ? '<div class="toolh">סצנה אחרי סצנה</div>' + c.sc.map(function (x) {
+            var sh = scenes[x.sn - 1] ? scenes[x.sn - 1].h : "";
+            return '<button class="charsc" data-sn="' + x.sn + '"><b>סצנה ' + x.sn + (sh ? ' · ' + esc(sh) : '') + '</b>' +
+              (x.want ? '<span><i>רוצה:</i> ' + esc(x.want) + '</span>' : '') + (x.block ? '<span><i>חוסם:</i> ' + esc(x.block) + '</span>' : '') + '</button>';
+          }).join("") : '') + '</div>';
+      }
+      return '<div class="charcard"><button class="charhead" data-n="' + esc(c.name) + '">' + (open ? "▾ " : "◂ ") + esc(c.name) +
+        (c.f["רצון"] ? '<span>' + esc(c.f["רצון"]) + '</span>' : '') + '</button>' + body + '</div>';
+    }).join("");
+    if (charsSetupOpen === null) charsSetupOpen = !charsData.length;
+    if (!charsSetupOpen && charsData.length) {
+      return '<div class="promptbox"><div class="beattop"><button class="lb" id="charsnew">▾ ניתוח חדש</button><button class="lb" id="charsclear">נקה</button></div>' + cards + '</div>';
+    }
+    return '<div class="promptbox">' +
+      '<div class="toolh">הבקשה ל-Claude (בחלון התסריט)</div>' +
+      '<textarea id="charstext" readonly rows="5">' + esc(buildCharsPrompt()) + '</textarea>' +
+      '<button class="lb on" id="charscopy">העתק</button> <span class="chgstat" id="charscopied"></span>' +
+      '<div class="toolh">תשובת Claude</div>' +
+      '<textarea id="charsreply" rows="4" placeholder="הדבק כאן את הניתוח ש-Claude החזיר">' + esc(charsReplyText) + '</textarea>' +
+      '<button class="lb on" id="charsapply">הצג ניתוח</button> <button class="lb" id="charsclear">נקה</button>' +
+      '<div class="toolnote" id="charsstat">' + esc(charsStat) + '</div>' +
+      (cards ? '<div class="toolh">הדמויות</div>' + cards : '') +
+      '<div class="toolnote">הבקשה עוברת על כל הסרט. אם Claude נעצר באמצע, כתוב לו "תמשיך" והדבק כאן את כל התשובה יחד. לחיצה על דמות פותחת את הכרטיס שלה; לחיצה על סצנה קופצת אליה.</div></div>';
+  }
+  function applyChars() {
+    var reply = $("charsreply").value || "";
+    charsReplyText = reply;
+    var out = [], cur = null, bad = 0;
+    var strip = function (t, w) { return String(t || "").replace(new RegExp("^\\s*" + w + "\\s*:\\s*"), "").trim(); };
+    reply.split(/\n/).forEach(function (line) {
+      if (line.indexOf("|") < 0) return;
+      var parts = line.split("|").map(function (x) { return x.trim().replace(/^\*+|\*+$/g, "").trim(); });
+      var key = parts[0].replace(/^[-*#\s]+/, "").replace(/:$/, "").trim();
+      if (key === "דמות") { cur = { name: parts[1] || "דמות", f: {}, sc: [] }; out.push(cur); return; }
+      if (!cur) { bad++; return; }
+      var sm = /^סצנה\s*(\d+)/.exec(key);
+      if (sm) { cur.sc.push({ sn: +sm[1], want: strip(parts[1], "רוצה"), block: strip(parts.slice(2).join(" "), "חוסם") }); return; }
+      var known = CHAR_FIELDS.some(function (f) { return f[0] === key; });
+      if (known) { cur.f[key] = parts.slice(1).join(" | ").trim(); return; }
+      bad++;
+    });
+    if (!out.length) { charsStat = "לא נמצאה שורה \"דמות | שם\" בתשובה."; renderList(); return; }
+    // the same character pasted twice (after "continue") is merged
+    var merged = [];
+    out.forEach(function (c) {
+      var prev = merged.filter(function (m) { return m.name === c.name; })[0];
+      if (!prev) { merged.push(c); return; }
+      Object.keys(c.f).forEach(function (k) { prev.f[k] = c.f[k]; });
+      prev.sc = prev.sc.concat(c.sc);
+    });
+    charsData = merged;
+    if (W.saveChars) W.saveChars(charsData);
+    charOpen = {}; if (merged[0]) charOpen[merged[0].name] = true;
+    charsSetupOpen = false;
+    charsStat = merged.length + " דמויות" + (bad ? ", " + bad + " שורות לא מובנות" : "") + ".";
+    renderList();
+  }
+  document.addEventListener("input", function (e) { if (e.target && e.target.id === "charsreply") charsReplyText = e.target.value; });
   // ---------- actions: Claude lists every physical action per character; each character gets its own highlight colour
   var actsOpen = false;
   var actsData = null;         // {map:{name:colourIndex}, chars:[{name, c, n}], miss} kept in the document settings
@@ -977,8 +1055,7 @@
         return '<button class="toolbtn' + (toolPending === it.cmd ? " busy" : "") + '" data-cmd="' + it.cmd + '"><b>' + esc(it.t) + '</b><span>' +
           esc(toolPending === it.cmd ? "נשלח… (עד 2 שניות)" : it.d) + '</span></button>';
       }).join("") + (g.note ? '<div class="toolnote">' + esc(g.note) + '</div>' : "") +
-        (g.h === "ניתוח ביטים" && beatsOpen ? beatsBox() : "") +
-        (g.h === "ניתוח ביטים" && actsOpen ? actsBox() : "") +
+        (g.h === "פעולות" && actsOpen ? actsBox() : "") +
         (g.h.indexOf("השוואה חכמה") === 0 && smartPrompt ? '<div class="promptbox"><div class="toolh">הבקשה ל-Claude (' + (smartPrompt === "s2t" ? "בחלון התסריט" : "בחלון הסינופסיס") + ')</div>' +
           (smartPrompt === "s2t" && !smartBundle.ready ? '<div class="toolnote">' + esc(smartBundle.msg || "אוסף את הסצנות…") + '</div>' :
           '<textarea id="smarttext" readonly rows="5">' + esc(smartPrompt === "s2t" ? PROMPTS.s2t + "\n\n===== החומר =====\n\n" + smartBundle.text : PROMPTS[smartPrompt]) + '</textarea>' +
@@ -1045,6 +1122,8 @@
     var list = $("scenes");
     if (view === "changes") { list.className = "view-changes"; renderChanges(list); return; }
     if (view === "tools") { list.className = "view-tools"; renderTools(list); return; }
+    if (view === "beats") { list.className = "view-tools"; list.innerHTML = '<div class="toolgrp"><div class="toolh">ניתוח ביטים</div><div class="toolnote">Claude מחלק כל סצנה לביטים לפי התפניות בדינמיקה, צובע כל ביט, וכותב מה כל דמות באמת רוצה להגיד.</div>' + beatsBox() + '</div>'; return; }
+    if (view === "chars") { list.className = "view-tools"; list.innerHTML = '<div class="toolgrp"><div class="toolh">ניתוח דמויות</div><div class="toolnote">לכל דמות: מה היא רוצה ומה חוסם אותה, לאורך כל הסרט ובכל סצנה.</div>' + charsBox() + '</div>'; return; }
     if (view === "notes") { view = "compare"; lsSet("view", view); renderList(); return; }
     if (view === "todo") { list.className = "view-notes"; renderTodo(list); return; }
     if (view === "compare") {
@@ -1120,10 +1199,10 @@
   }
 
   function render() {
-    document.body.classList.toggle("noheader", view === "notes" || view === "compare" || view === "todo" || view === "feedback");
+    document.body.classList.toggle("noheader", view === "notes" || view === "compare" || view === "todo" || view === "feedback" || view === "beats" || view === "chars");
     renderBar();
     renderPlotBar();
-    var hideBars = view === "changes" || view === "tools" || view === "compare" || view === "notes" || view === "todo" || view === "feedback" || view === "answers";
+    var hideBars = view === "changes" || view === "tools" || view === "compare" || view === "notes" || view === "todo" || view === "feedback" || view === "answers" || view === "beats" || view === "chars";
     $("markbar").hidden = hideBars;
     if (hideBars) $("plotbar").hidden = true;
     renderList();
@@ -1620,7 +1699,15 @@
         }
         return;
       }
-      if (view === "tools" || view === "compare") {
+      if (view === "tools" || view === "compare" || view === "beats" || view === "chars") {
+        if (e.target.closest("#charsnew")) { charsSetupOpen = true; renderList(); return; }
+        if (e.target.closest("#charscopy")) { copyFrom("charstext", "charscopied"); return; }
+        if (e.target.closest("#charsapply")) { applyChars(); return; }
+        if (e.target.closest("#charsclear")) { charsData = []; if (W.saveChars) W.saveChars([]); charsStat = "הניתוח נמחק."; charsSetupOpen = true; renderList(); return; }
+        var chh = e.target.closest(".charhead");
+        if (chh) { charOpen[chh.dataset.n] = !charOpen[chh.dataset.n]; renderList(); return; }
+        var chs = e.target.closest(".charsc");
+        if (chs) { var scn = scenes[+chs.dataset.sn - 1]; if (scn && scn.h) W.gotoHeading(scn.h).catch(showErr); return; }
         if (e.target.closest("#smartcopy")) { copyFrom("smarttext", "smartcopied"); return; }
         if (e.target.closest("#smartrebuild")) { loadBundle(0); return; }
         if (e.target.closest("#beatscopy")) { copyFrom("beatstext", "beatscopied"); return; }
