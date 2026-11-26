@@ -634,6 +634,49 @@
       });
     },
 
+    // beats: mark each quoted passage with its colour; every mark gets a bookmark zBeat* so it can be cleared alone
+    beatMark: function (items) {
+      return run(function (ctx) {
+        var body = ctx.document.body;
+        var names = body.getRange("Whole").getBookmarks(true, true);
+        return ctx.sync().then(function () {
+          names.value.filter(function (nm) { return /^zBeat/.test(nm); }).forEach(function (nm) {
+            ctx.document.getBookmarkRangeOrNullObject(nm).font.highlightColor = null;
+            ctx.document.deleteBookmark(nm);
+          });
+          var searches = items.map(function (it) {
+            var s = body.search(it.text.slice(0, 250), { matchCase: false });
+            s.load("items");
+            return s;
+          });
+          return ctx.sync().then(function () {
+            var marked = 0, missing = 0, stamp = String(Date.now()).slice(-6);
+            items.forEach(function (it, k) {
+              var h = searches[k].items[0];
+              if (!h) { missing++; return; }
+              h.font.highlightColor = it.color;
+              h.insertBookmark("zBeat" + stamp + "_" + k);
+              marked++;
+            });
+            return ctx.sync().then(function () { return { marked: marked, missing: missing }; });
+          });
+        });
+      });
+    },
+
+    beatClear: function () {
+      return run(function (ctx) {
+        var names = ctx.document.body.getRange("Whole").getBookmarks(true, true);
+        return ctx.sync().then(function () {
+          names.value.filter(function (nm) { return /^zBeat/.test(nm); }).forEach(function (nm) {
+            ctx.document.getBookmarkRangeOrNullObject(nm).font.highlightColor = null;
+            ctx.document.deleteBookmark(nm);
+          });
+          return ctx.sync();
+        });
+      });
+    },
+
     // remove what the card left behind: green / turquoise marks and undo anchors (bookmarks zCard*)
     clearCardMarks: function () {
       if (!Office.context.requirements.isSetSupported("WordApi", "1.4")) return Promise.resolve();

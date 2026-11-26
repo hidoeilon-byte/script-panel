@@ -316,6 +316,9 @@
       { cmd: "smart_t2s", t: "תסריט ← סינופסיס", d: "מה שקורה בתסריט וחסר או שונה בסינופסיס. נפתח הסינופסיס וההערות נכנסות אליו." },
       { cmd: "smartclear", t: "סיום השוואה", d: "מוחק את הערות העזר. הערות ההשוואה נשארות." }
     ], note: "1. לוחצים על כיוון. 2. מעתיקים את הבקשה שמופיעה כאן. 3. מדביקים ל-Claude ב-Word (בחלון של המסמך שמקבל את ההערות). 4. ההבדלים מופיעים בלשונית הערות." },
+    { h: "ניתוח ביטים", items: [
+      { cmd: "beats", t: "ניתוח ביטים בסצנות", d: "בוחרים סצנות. Claude מזהה את המנעד הרגשי ושינויי המצב, והסימונים נכנסים למרקר בצבע לכל סוג." }
+    ] },
     { h: "דראפטים", items: [
       { cmd: "force", t: "דראפט חדש עכשיו", d: "שומר דראפט חדש בלי לחכות לשינוי מהותי." },
       { cmd: "prevdraft", t: "דראפט קודם", d: "פותח את הדראפט הקודם לקריאה, לצד הקובץ." }
@@ -330,6 +333,47 @@
   var toolPending = "";
   var smartPrompt = "";   // "s2t" | "t2s" | ""
   var smartBundle = { ready: false, msg: "", text: "", scenes: 0, missing: 0 };
+  // ---------- beats: pick scenes, copy the request to Claude for Word, paste the answer back and mark it
+  var beatsOpen = false;
+  var beatSel = {};        // scene index -> true
+  var BEAT_COLORS = { "שינוי מצב": "DarkBlue", "צחוק": "Pink", "התקרבות": "Blue", "התרככות": "Gray25" };
+  var BEATS_PROMPT = "ניתוח ביטים רגשיים בסצנות. פתח את המסמך הפתוח ב-Word, ומצא את הסצנות הבאות לפי הכותרת שלהן. לכל סצנה: כתוב משפט אחד על המנעד הרגשי שלה, ואיפה הזוג אוהב ואיפה הוא משלים. סמן במדויק רגעים של: שינוי מצב, צחוק של הדמות, התקרבות, והתרככות. אל תשנה את המסמך ואל תכתוב הערות. החזר רשימה: שורה לכל סצנה שמתחילה ב\"סצנה: \" עם שם הסצנה ומשפט המנעד, ואחריה שורה לכל סימון בפורמט:\nסוג | ציטוט מדויק מהטקסט (עד 100 תווים, מילה במילה)\nסוגים מותרים: שינוי מצב, צחוק, התקרבות, התרככות.\n\nהסצנות:\n";
+  function buildBeatsPrompt() {
+    var names = scenes.map(function (s, i) { return beatSel[i] ? "- " + (s.h || "סצנה " + (i + 1)) : ""; }).filter(Boolean).join("\n");
+    return BEATS_PROMPT + (names || "(עוד לא נבחרו סצנות)");
+  }
+  function beatsBox() {
+    var rows = scenes.map(function (s, i) {
+      return '<label class="beatrow"><input type="checkbox" class="beatcb" data-i="' + i + '"' + (beatSel[i] ? " checked" : "") + '> ' + esc(s.h || ("סצנה " + (i + 1))) + '</label>';
+    }).join("");
+    return '<div class="promptbox"><div class="toolh">בחירת סצנות לניתוח</div>' +
+      (scenes.length ? '<div class="beatlist">' + rows + '</div><div class="toolnote"><button class="linkbtn" id="beatsall">בחר הכל</button> · <button class="linkbtn" id="beatsnone">נקה בחירה</button></div>'
+        : '<div class="toolnote">אין סצנות בתסריט. פתח את המסמך ורענן.</div>') +
+      '<div class="toolh">הבקשה ל-Claude (בחלון התסריט)</div>' +
+      '<textarea id="beatstext" readonly rows="5">' + esc(buildBeatsPrompt()) + '</textarea>' +
+      '<button class="lb on" id="beatscopy">העתק</button> <span class="chgstat" id="beatscopied"></span>' +
+      '<div class="toolh">תשובת Claude</div>' +
+      '<textarea id="beatsreply" rows="4" placeholder="הדבק כאן את הרשימה ש-Claude החזיר"></textarea>' +
+      '<button class="lb on" id="beatsapply">סמן במרקר</button> <button class="lb" id="beatsclear">נקה סימוני ביטים</button>' +
+      '<div class="toolnote" id="beatsstat"></div>' +
+      '<div class="toolnote">שורה לכל סימון: סוג | ציטוט. שינוי מצב כחול כהה, צחוק ורוד, התקרבות כחול, התרככות אפור.</div></div>';
+  }
+  function applyBeats() {
+    var items = [], bad = 0;
+    ($("beatsreply").value || "").split(/\n/).forEach(function (line) {
+      var parts = line.split("|");
+      if (parts.length < 2) return;
+      var type = parts[0].trim().replace(/^[-*\d.\s]+/, "");
+      var q = parts.slice(1).join("|").trim().replace(/^"|"$/g, "").trim();
+      if (!BEAT_COLORS[type] || !q) { bad++; return; }
+      items.push({ text: q, color: BEAT_COLORS[type] });
+    });
+    if (!items.length) { $("beatsstat").textContent = "לא נמצאו שורות בפורמט: סוג | ציטוט."; return; }
+    $("beatsstat").textContent = "מסמן…";
+    W.beatMark(items).then(function (r) {
+      $("beatsstat").textContent = "סומנו " + r.marked + (r.missing ? ", לא נמצא טקסט ל-" + r.missing : "") + (bad ? ", שורות לא מובנות: " + bad : "");
+    }).catch(showErr);
+  }
   // the whole material (synopsis helper note + script text, scene by scene) is copied with the request, so Claude reads it at once
   function loadBundle(tries) {
     smartBundle = { ready: false, msg: "אוסף את הסצנות…", text: "", scenes: 0, missing: 0 };
@@ -811,6 +855,7 @@
         return '<button class="toolbtn' + (toolPending === it.cmd ? " busy" : "") + '" data-cmd="' + it.cmd + '"><b>' + esc(it.t) + '</b><span>' +
           esc(toolPending === it.cmd ? "נשלח… (עד 2 שניות)" : it.d) + '</span></button>';
       }).join("") + (g.note ? '<div class="toolnote">' + esc(g.note) + '</div>' : "") +
+        (g.h === "ניתוח ביטים" && beatsOpen ? beatsBox() : "") +
         (g.h.indexOf("השוואה חכמה") === 0 && smartPrompt ? '<div class="promptbox"><div class="toolh">הבקשה ל-Claude (' + (smartPrompt === "s2t" ? "בחלון התסריט" : "בחלון הסינופסיס") + ')</div>' +
           (smartPrompt === "s2t" && !smartBundle.ready ? '<div class="toolnote">' + esc(smartBundle.msg || "אוסף את הסצנות…") + '</div>' :
           '<textarea id="smarttext" readonly rows="5">' + esc(smartPrompt === "s2t" ? PROMPTS.s2t + "\n\n===== החומר =====\n\n" + smartBundle.text : PROMPTS[smartPrompt]) + '</textarea>' +
@@ -1455,7 +1500,26 @@
       if (view === "tools" || view === "compare") {
         if (e.target.closest("#smartcopy")) { copyFrom("smarttext", "smartcopied"); return; }
         if (e.target.closest("#smartrebuild")) { loadBundle(0); return; }
+        if (e.target.closest("#beatscopy")) { copyFrom("beatstext", "beatscopied"); return; }
+        if (e.target.closest("#beatsapply")) { applyBeats(); return; }
+        if (e.target.closest("#beatsclear")) {
+          W.beatClear().then(function () { $("beatsstat").textContent = "הסימונים נוקו."; }).catch(showErr);
+          return;
+        }
+        if (e.target.closest("#beatsall") || e.target.closest("#beatsnone")) {
+          var allOn = !!e.target.closest("#beatsall");
+          scenes.forEach(function (s, i) { beatSel[i] = allOn; });
+          document.querySelectorAll(".beatcb").forEach(function (cb) { cb.checked = allOn; });
+          $("beatstext").value = buildBeatsPrompt();
+          return;
+        }
+        if (e.target.classList && e.target.classList.contains("beatcb")) {
+          beatSel[+e.target.dataset.i] = e.target.checked;
+          $("beatstext").value = buildBeatsPrompt();
+          return;
+        }
         var tb = e.target.closest(".toolbtn");
+        if (tb && tb.dataset.cmd === "beats") { beatsOpen = !beatsOpen; renderList(); return; }
         if (tb) {
           if (tb.dataset.cmd === "smart_s2t") { smartPrompt = "s2t"; setTimeout(function () { loadBundle(10); }, 2500); }
           else if (tb.dataset.cmd === "smart_t2s") smartPrompt = "t2s";
