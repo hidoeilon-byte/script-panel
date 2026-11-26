@@ -335,6 +335,7 @@
   var beatsList = null;    // [{sn, name, note, quote, color, bm}] kept in the document settings
   var beatsReplyText = "";
   var beatsStat = "";
+  var beatsSetupOpen = null;   // null = decide from the list: collapsed when beats are already marked
   // light highlight colours only, so the text stays readable; yellow is left for the draft changes
   var BEAT_PALETTE = [
     { c: "#00FFFF", css: "#00FFFF" },
@@ -368,6 +369,11 @@
           (b.sub ? '<span class="beatsub">' + b.sub.split(/\s*[\/;]\s*/).filter(Boolean).map(function (x) { return '<i>' + esc(x) + '</i>'; }).join("") + '</span>' : '') +
           (b.bm ? '' : '<em>לא נמצא במסמך, הביט התמזג בקודם</em>') + '</span></button>';
       }).join("") + '</div>';
+    }
+    if (beatsSetupOpen === null) beatsSetupOpen = !beatsList.length;
+    if (!beatsSetupOpen && beatsList.length) {
+      // after colouring only the beats stay in view; the picker and the text boxes fold away
+      return '<div class="promptbox"><div class="beattop"><button class="lb" id="beatsnew">▾ ניתוח חדש</button><button class="lb" id="beatsclear">נקה ביטים</button></div>' + res + '</div>';
     }
     return '<div class="promptbox">' + pick +
       '<div class="toolh">הבקשה ל-Claude (בחלון התסריט)</div>' +
@@ -403,6 +409,7 @@
       beats.forEach(function (b, j) { b.bm = res[j] || null; if (!b.bm) miss++; });
       beatsList = beats;
       if (W.saveBeats) W.saveBeats(beatsList);
+      if (beats.length - miss > 0) beatsSetupOpen = false;
       beatsStat = "נצבעו " + (beats.length - miss) + " ביטים" + (miss ? ", " + miss + " לא נמצאו" : "") + (bad ? ", " + bad + " שורות לא מובנות" : "") + ".";
       renderList();
     }).catch(function (er) {
@@ -1540,7 +1547,7 @@
         if (e.target.closest("#beatscopy")) { copyFrom("beatstext", "beatscopied"); return; }
         if (e.target.closest("#beatsapply")) { applyBeats(); return; }
         if (e.target.closest("#beatsclear")) {
-          W.beatClear().then(function () { beatsList = []; if (W.saveBeats) W.saveBeats([]); beatsStat = "הביטים נוקו."; renderList(); }).catch(showErr);
+          W.beatClear().then(function () { beatsList = []; if (W.saveBeats) W.saveBeats([]); beatsStat = "הביטים נוקו."; beatsSetupOpen = true; renderList(); }).catch(showErr);
           return;
         }
         if (e.target.closest("#beatsall") || e.target.closest("#beatsnone")) {
@@ -1551,6 +1558,7 @@
           $("beatscount").textContent = beatsCount();
           return;
         }
+        if (e.target.closest("#beatsnew")) { beatsSetupOpen = true; renderList(); return; }
         var bi = e.target.closest(".beatitem");
         if (bi) { var bb = beatsList && beatsList[+bi.dataset.k]; if (bb && bb.bm) W.gotoMark(bb.bm).catch(showErr); return; }
         if (e.target.closest("#beatsfold")) { beatsPickOpen = !beatsPickOpen; renderList(); return; }
