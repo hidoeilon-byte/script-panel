@@ -449,3 +449,5 @@ body.noheader #styles, body.noheader .status, body.noheader #locbox { display: n
 .scene .row { padding-left: 24px; }
 .strow { position: relative; padding-left: 28px; }
 .strow > .scask { position:absolute; top:6px; left:6px; z-index:2; }
+.strow .srdot { margin-top: 0; align-self: center; }
+.strow .markpick { flex-basis: 100%; padding: 4px 0 2px; }

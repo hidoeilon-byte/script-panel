@@ -181,9 +181,9 @@
         return '<button data-group="' + x.g + '" class="' + (x.g === cur ? "on" : "") + '">' + x.t +
           (x.g === "notes" && openNotes() ? ' <span class="badge">' + openNotes() + '</span>' : '') + '</button>';
       }).join("") + '</div>' +
-      '<div class="seg sub">' + gb.subs.map(function (sv) {
+      (gb.subs.length > 1 ? '<div class="seg sub">' + gb.subs.map(function (sv) {
         return '<button data-view="' + sv[0] + '" class="' + (view === sv[0] ? "on" : "") + '">' + sv[1] + '</button>';
-      }).join("") + '</div>' +
+      }).join("") + '</div>' : '') +
       '<span class="cnt">' + (scenes.length ? scenes.length + " סצנות" : "") + '</span>' +
       '<button class="icon" id="barfold" title="הסתר או הצג את סרגל הכלים למעלה" aria-label="הסתר או הצג סרגל">' + (document.body.classList.contains("compact") ? "▾" : "▴") + '</button>' +
       '<span class="sp"></span>' +
@@ -1185,7 +1185,11 @@
             return '<div class="strow' + (mkc ? " marked" : "") + '" draggable="true" data-i="' + i + '"' + (mkc ? ' style="border-inline-start:6px solid ' + mkc.c + '"' : "") + '>' +
               '<span class="scask" data-sn="' + (i + 1) + '" title="שאל את Claude רק על הסצנה הזו">✳</span>' +
               '<span class="srnum">' + (i + 1) + '</span><span class="srhead">' + esc(sc.h) + '</span>' +
-              sumPart + '</div>';
+              '<button class="dot srdot' + (mkc ? "" : " empty") + '" data-i="' + i + '" title="' + (mkc ? esc(mkc.n) : "צבע לסצנה") + '"' + (mkc ? ' style="background:' + mkc.c + '"' : "") + '></button>' +
+              sumPart +
+              (picking === i ? '<div class="markpick">' + marks.map(function (m) {
+                return '<button class="pick' + (sc.m === m.id ? " on" : "") + '" data-m="' + esc(m.id) + '" style="background:' + m.c + '">' + esc(m.n) + '</button>';
+              }).join("") + '<button class="pick none" data-m="">ללא</button></div>' : '') + '</div>';
           }).join("");
         }
         html += '</div>';
