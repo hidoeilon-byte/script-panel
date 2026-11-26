@@ -343,10 +343,10 @@
   var beatsStat = "";
   // light highlight colours only, so the text stays readable; yellow is left for the draft changes
   var BEAT_PALETTE = [
-    { c: "Turquoise", css: "#00FFFF" },
-    { c: "Pink", css: "#FF00FF" },
-    { c: "BrightGreen", css: "#00FF00" },
-    { c: "Gray25", css: "#C0C0C0" }
+    { c: "#00FFFF", css: "#00FFFF" },
+    { c: "#FF00FF", css: "#FF00FF" },
+    { c: "#00FF00", css: "#00FF00" },
+    { c: "#C0C0C0", css: "#C0C0C0" }
   ];
   function beatCss(c) { var m = BEAT_PALETTE.filter(function (x) { return x.c === c; })[0]; return m ? m.css : "#ddd"; }
   var BEATS_PROMPT = "ניתוח ביטים בסצנות. פתח את המסמך הפתוח ב-Word ומצא את הסצנות שברשימה למטה לפי הכותרת שלהן. עבור על כל סצנה בריכוז, שורה אחרי שורה, וחלק אותה לביטים. ביט הוא קטע רצוף שבו הדינמיקה בין הדמויות נשארת אותו דבר (למשל: הם רבים; הוא מצחיק אותה והיא מתקרבת; משהו קורה והם כועסים). ביט חדש מתחיל בדיוק בשורה שבה השיחה מקבלת תפנית: שינוי ביחסי הכוח, ברגש, במה שאחת הדמויות רוצה, או בקרבה ביניהן. סמן רק תפניות אמיתיות, לא כל שינוי קטן. הביט הראשון בכל סצנה מתחיל בשורה הראשונה אחרי הכותרת. אל תשנה את המסמך ואל תכתוב הערות. החזר רק רשימה, שורה לכל ביט, לפי הסדר, בפורמט:\nסצנה N | שם הביט (עד 6 מילים) | מה משתנה בתפנית (משפט אחד) | ציטוט פתיחה\nציטוט הפתיחה: 5 עד 12 המילים הראשונות של הפסקה שבה הביט מתחיל, מילה במילה מהמסמך. אם הביט מתחיל בדיאלוג, צטט את שורת הדיאלוג ולא את שם הדמות.\n\nהסצנות:\n";
@@ -409,7 +409,10 @@
       if (W.saveBeats) W.saveBeats(beatsList);
       beatsStat = "נצבעו " + (beats.length - miss) + " ביטים" + (miss ? ", " + miss + " לא נמצאו" : "") + (bad ? ", " + bad + " שורות לא מובנות" : "") + ".";
       renderList();
-    }).catch(showErr);
+    }).catch(function (er) {
+      beatsStat = "הצביעה נעצרה: " + (er && er.message ? er.message : er) + ". נסה שוב, ואם זה חוזר שלח לי צילום.";
+      renderList();
+    });
   }
   document.addEventListener("input", function (e) { if (e.target && e.target.id === "beatsreply") beatsReplyText = e.target.value; });
   // the whole material (synopsis helper note + script text, scene by scene) is copied with the request, so Claude reads it at once
