@@ -290,6 +290,7 @@
     }).join("") + '<button class="pick none" data-m="">ללא</button></div>' : "";
     return '<div class="scene' + (i === curScene ? " cur" : "") + (editing === i ? " open" : "") + (mk ? " marked" : "") + '" data-i="' + i + '"' +
       (mk ? ' style="--mk:' + mk.c + '"' : "") + '>' +
+      '<span class="scask" data-sn="' + (i + 1) + '" title="שאל את Claude רק על הסצנה הזו">✳</span>' +
       '<div class="row">' + handle + main + dot +
         '<button class="tog" data-i="' + i + '" title="תקציר, עלילות וסיקוונס">' + (editing === i ? "▴" : "✎") + '</button>' +
       '</div>' + picker + syn +
@@ -371,7 +372,7 @@
     if (beatsList.length) {
       var lastSn = -1;
       res = '<div class="beatres">' + beatsList.map(function (b, j) {
-        var head = b.sn !== lastSn ? '<div class="beatsc">סצנה ' + b.sn + (scenes[b.sn - 1] ? ' · ' + esc(scenes[b.sn - 1].h) : '') + '</div>' : '';
+        var head = b.sn !== lastSn ? '<div class="beatsc"><span class="scask" data-sn="' + b.sn + '" title="שאל את Claude רק על הסצנה הזו">✳</span>סצנה ' + b.sn + (scenes[b.sn - 1] ? ' · ' + esc(scenes[b.sn - 1].h) : '') + '</div>' : '';
         lastSn = b.sn;
         return head + '<button class="beatitem' + (b.bm ? "" : " miss") + '" data-k="' + j + '"><span class="beatsw" style="background:' + beatCss(b.color) + '"></span>' +
           '<span class="beatbody"><b>' + esc(b.name) + '</b>' + (b.note ? '<span>' + esc(b.note) + '</span>' : '') +
@@ -453,7 +454,7 @@
         }).join("") +
           (c.sc && c.sc.length ? '<div class="toolh">סצנה אחרי סצנה</div>' + c.sc.map(function (x) {
             var sh = scenes[x.sn - 1] ? scenes[x.sn - 1].h : "";
-            return '<button class="charsc" data-sn="' + x.sn + '"><b>סצנה ' + x.sn + (sh ? ' · ' + esc(sh) : '') + '</b>' +
+            return '<button class="charsc" data-sn="' + x.sn + '"><span class="scask" data-sn="' + x.sn + '" title="שאל את Claude רק על הסצנה הזו">✳</span><b>סצנה ' + x.sn + (sh ? ' · ' + esc(sh) : '') + '</b>' +
               (x.want ? '<span><i>רוצה:</i> ' + esc(x.want) + '</span>' : '') + (x.block ? '<span><i>חוסם:</i> ' + esc(x.block) + '</span>' : '') + '</button>';
           }).join("") : '') + '</div>';
       }
@@ -509,6 +510,20 @@
     renderList();
   }
   document.addEventListener("input", function (e) { if (e.target && e.target.id === "charsreply") charsReplyText = e.target.value; });
+  // the Claude icon on a scene: copies a request that keeps Claude inside that one scene
+  document.addEventListener("click", function (e) {
+    var ic = e.target.closest && e.target.closest(".scask");
+    if (!ic) return;
+    e.preventDefault(); e.stopPropagation();
+    var n = +ic.dataset.sn, sc = scenes[n - 1];
+    var txt = "שאלה על סצנה " + n + " בלבד" + (sc && sc.h ? ": \"" + sc.h + "\"" : "") + ". " +
+      "קרא במסמך רק את הסצנה הזו, מהכותרת שלה ועד הכותרת של הסצנה הבאה. אל תקרא את שאר המסמך ואל תשנה אותו. ענה בצ'אט בלבד, קצר וממוקד.\n" +
+      "השאלה שלי: ";
+    var old = ic.textContent;
+    var done = function () { ic.textContent = "✓"; ic.classList.add("ok"); setTimeout(function () { ic.textContent = old; ic.classList.remove("ok"); }, 1500); };
+    try { if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(txt).then(done, function () { fallbackCopy(txt); done(); }); return; } } catch (er) {}
+    fallbackCopy(txt); done();
+  }, true);
   // ---------- actions: Claude lists every physical action per character; each character gets its own highlight colour
   var actsOpen = false;
   var actsData = null;         // {map:{name:colourIndex}, chars:[{name, c, n}], miss} kept in the document settings

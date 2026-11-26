@@ -438,3 +438,12 @@ body.noheader #styles, body.noheader .status, body.noheader #locbox { display: n
 .charhead span, .charf b, .beatbody span, .charsc i, .actrow span:last-child { color:#333; }
 .actrow { background:#fff; border-radius:6px; }
 .beatbody em { color:#b00; }
+
+/* Claude icon on a scene: top left corner, copies a request about that scene only */
+.scene { position: relative; }
+.scene > .scask { position:absolute; top:4px; left:6px; z-index:2; }
+.scask { display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:50%; font-size:12px; line-height:1; color:#d97757; background:rgba(217,119,87,.12); cursor:pointer; user-select:none; }
+.scask:hover { background:rgba(217,119,87,.28); }
+.scask.ok { color:#1a7f37; background:rgba(26,127,55,.15); }
+.beatsc .scask, .charsc .scask { float:left; margin-inline-start:6px; }
+.scene .row { padding-left: 24px; }
