@@ -634,34 +634,69 @@
       });
     },
 
-    // beats: mark each quoted passage with its colour; every mark gets a bookmark zBeat* so it can be cleared alone
-    beatMark: function (items) {
+    // beats: every beat is coloured from its first paragraph to the paragraph before the next beat (or the end of the scene).
+    // beats = [{sn, quote, color}]; returns the bookmark name of each beat, or null when its opening line was not found
+    beatMark: function (beats) {
       return run(function (ctx) {
         var body = ctx.document.body;
         var names = body.getRange("Whole").getBookmarks(true, true);
+        var ps = body.paragraphs;
+        ps.load("items/style,items/text");
         return ctx.sync().then(function () {
           names.value.filter(function (nm) { return /^zBeat/.test(nm); }).forEach(function (nm) {
             ctx.document.getBookmarkRangeOrNullObject(nm).font.highlightColor = null;
             ctx.document.deleteBookmark(nm);
           });
-          var searches = items.map(function (it) {
-            var s = body.search(it.text.slice(0, 250), { matchCase: false });
-            s.load("items");
-            return s;
+          var sr = sceneRanges(ps);
+          var norm = function (t) {
+            return String(t || "").replace(/[‎‏‪-‮]/g, "").replace(/[“”״]/g, '"').replace(/[‘’׳]/g, "'")
+              .replace(/[–—]/g, "-").replace(/\s+/g, " ").trim();
+          };
+          var texts = ps.items.map(function (p) { return norm(p.text); });
+          var CH = "דמות", PAR = "הערת בימוי";
+          var bounds = function (k) {
+            return { from: sr.idx[k] + 1, to: k + 1 < sr.idx.length ? sr.idx[k + 1] - 1 : ps.items.length - 1 };
+          };
+          var found = beats.map(function (b) {
+            var k = b.sn - 1;
+            if (k < 0 || k >= sr.idx.length) return -1;
+            var bd = bounds(k), q = norm(b.quote);
+            if (!q) return -1;
+            var look = function (qq) { for (var i = bd.from; i <= bd.to; i++) { if (texts[i] && texts[i].indexOf(qq) >= 0) return i; } return -1; };
+            var at = look(q);
+            if (at < 0 && q.length > 24) at = look(q.slice(0, 24));
+            if (at < 0) return -1;
+            // a beat that opens with dialogue starts at the character name (and parenthetical) above it
+            for (var s = 0; s < 2 && at - 1 >= bd.from && (ps.items[at - 1].style === CH || ps.items[at - 1].style === PAR); s++) at--;
+            return at;
           });
-          return ctx.sync().then(function () {
-            var marked = 0, missing = 0, stamp = String(Date.now()).slice(-6);
-            items.forEach(function (it, k) {
-              var h = searches[k].items[0];
-              if (!h) { missing++; return; }
-              h.font.highlightColor = it.color;
-              h.insertBookmark("zBeat" + stamp + "_" + k);
-              marked++;
+          var results = beats.map(function () { return null; });
+          var stamp = String(Date.now()).slice(-6);
+          sr.idx.forEach(function (h, k) {
+            var bd = bounds(k), list = [];
+            beats.forEach(function (b, j) { if (b.sn - 1 === k && found[j] >= 0) list.push(j); });
+            list.sort(function (a, c) { return found[a] - found[c] || a - c; });
+            list.forEach(function (j, t) {
+              var st = t === 0 ? bd.from : found[j];
+              var en = t + 1 < list.length ? found[list[t + 1]] - 1 : bd.to;
+              if (en < st || st > bd.to) return;
+              var r = ps.items[st].getRange("Whole").expandTo(ps.items[en].getRange("Whole"));
+              r.font.highlightColor = beats[j].color;
+              var nm = "zBeat" + stamp + "_" + j;
+              r.insertBookmark(nm);
+              results[j] = nm;
             });
-            return ctx.sync().then(function () { return { marked: marked, missing: missing }; });
           });
+          return ctx.sync().then(function () { return results; });
         });
       });
+    },
+
+    loadBeats: function () {
+      try { return Office.context.document.settings.get("scenePanel.beats") || []; } catch (e) { return []; }
+    },
+    saveBeats: function (list) {
+      try { var st = Office.context.document.settings; st.set("scenePanel.beats", list); st.saveAsync(); } catch (e) {}
     },
 
     beatClear: function () {

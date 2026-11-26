@@ -405,3 +405,14 @@ body.noheader #styles, body.noheader .status, body.noheader #locbox { display: n
 .beatrow input { margin-top:3px; flex:0 0 auto; }
 .beatrow span { flex:1 1 auto; }
 .beatbar { display:flex; gap:12px; margin-bottom:8px; font-size:13px; }
+
+/* beats: result list */
+.beatres { margin:6px 0 8px; }
+.beatsc { font-size:12px; font-weight:700; color:#555; margin:10px 0 4px; }
+.beatitem { display:flex; align-items:flex-start; gap:8px; width:100%; text-align:right; background:#fff; border:1px solid #e3e3e3; border-radius:8px; padding:7px 8px; margin-bottom:5px; font:inherit; cursor:pointer; }
+.beatitem:hover { border-color:#bbb; }
+.beatitem.miss { opacity:.6; cursor:default; }
+.beatsw { flex:0 0 14px; height:14px; border-radius:3px; margin-top:3px; border:1px solid rgba(0,0,0,.15); }
+.beatbody { display:flex; flex-direction:column; gap:2px; font-size:13px; line-height:1.4; }
+.beatbody span { color:#555; }
+.beatbody em { color:#b00; font-style:normal; font-size:12px; }

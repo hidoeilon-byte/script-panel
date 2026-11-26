@@ -333,50 +333,85 @@
   var toolPending = "";
   var smartPrompt = "";   // "s2t" | "t2s" | ""
   var smartBundle = { ready: false, msg: "", text: "", scenes: 0, missing: 0 };
-  // ---------- beats: pick scenes, copy the request to Claude for Word, paste the answer back and mark it
+  // ---------- beats: pick scenes, Claude splits each scene into beats (stretches where the dynamic stays the same),
+  // the answer is pasted back, every beat is coloured from its first line to the next beat, and listed here
   var beatsOpen = false;
   var beatsPickOpen = false;
   var beatSel = {};        // scene index -> true
-  var BEAT_COLORS = { "שינוי מצב": "DarkBlue", "צחוק": "Pink", "התקרבות": "Blue", "התרככות": "Gray25" };
-  var BEATS_PROMPT = "ניתוח ביטים רגשיים בסצנות. פתח את המסמך הפתוח ב-Word, ומצא את הסצנות הבאות לפי הכותרת שלהן. לכל סצנה: כתוב משפט אחד על המנעד הרגשי שלה, ואיפה הזוג אוהב ואיפה הוא משלים. סמן במדויק רגעים של: שינוי מצב, צחוק של הדמות, התקרבות, והתרככות. אל תשנה את המסמך ואל תכתוב הערות. החזר רשימה: שורה לכל סצנה שמתחילה ב\"סצנה: \" עם שם הסצנה ומשפט המנעד, ואחריה שורה לכל סימון בפורמט:\nסוג | ציטוט מדויק מהטקסט (עד 100 תווים, מילה במילה)\nסוגים מותרים: שינוי מצב, צחוק, התקרבות, התרככות.\n\nהסצנות:\n";
+  var beatsList = null;    // [{sn, name, note, quote, color, bm}] kept in the document settings
+  var beatsReplyText = "";
+  var beatsStat = "";
+  // light highlight colours only, so the text stays readable; yellow is left for the draft changes
+  var BEAT_PALETTE = [
+    { c: "Turquoise", css: "#00FFFF" },
+    { c: "Pink", css: "#FF00FF" },
+    { c: "BrightGreen", css: "#00FF00" },
+    { c: "Gray25", css: "#C0C0C0" }
+  ];
+  function beatCss(c) { var m = BEAT_PALETTE.filter(function (x) { return x.c === c; })[0]; return m ? m.css : "#ddd"; }
+  var BEATS_PROMPT = "ניתוח ביטים בסצנות. פתח את המסמך הפתוח ב-Word ומצא את הסצנות שברשימה למטה לפי הכותרת שלהן. עבור על כל סצנה בריכוז, שורה אחרי שורה, וחלק אותה לביטים. ביט הוא קטע רצוף שבו הדינמיקה בין הדמויות נשארת אותו דבר (למשל: הם רבים; הוא מצחיק אותה והיא מתקרבת; משהו קורה והם כועסים). ביט חדש מתחיל בדיוק בשורה שבה השיחה מקבלת תפנית: שינוי ביחסי הכוח, ברגש, במה שאחת הדמויות רוצה, או בקרבה ביניהן. סמן רק תפניות אמיתיות, לא כל שינוי קטן. הביט הראשון בכל סצנה מתחיל בשורה הראשונה אחרי הכותרת. אל תשנה את המסמך ואל תכתוב הערות. החזר רק רשימה, שורה לכל ביט, לפי הסדר, בפורמט:\nסצנה N | שם הביט (עד 6 מילים) | מה משתנה בתפנית (משפט אחד) | ציטוט פתיחה\nציטוט הפתיחה: 5 עד 12 המילים הראשונות של הפסקה שבה הביט מתחיל, מילה במילה מהמסמך. אם הביט מתחיל בדיאלוג, צטט את שורת הדיאלוג ולא את שם הדמות.\n\nהסצנות:\n";
   function buildBeatsPrompt() {
     var names = scenes.map(function (s, i) { return beatSel[i] ? "- סצנה " + (i + 1) + ": " + (s.h || "") : ""; }).filter(Boolean).join("\n");
     return BEATS_PROMPT + (names || "(עוד לא נבחרו סצנות)");
   }
   function beatsCount() { return Object.keys(beatSel).filter(function (k) { return beatSel[k]; }).length; }
   function beatsBox() {
+    if (beatsList === null) beatsList = (W.loadBeats && W.loadBeats()) || [];
     var rows = scenes.map(function (s, i) {
       return '<label class="beatrow"><input type="checkbox" class="beatcb" data-i="' + i + '"' + (beatSel[i] ? " checked" : "") + '><span><b>' + (i + 1) + '.</b> ' + esc(s.h || ("סצנה " + (i + 1))) + '</span></label>';
     }).join("");
     var pick = '<button class="beatfold" id="beatsfold">' + (beatsPickOpen ? "▴" : "▾") + ' בחירת סצנות · נבחרו <span id="beatscount">' + beatsCount() + '</span> מתוך ' + scenes.length + '</button>' +
       (beatsPickOpen ? (scenes.length ? '<div class="beatlist">' + rows + '</div><div class="beatbar"><button class="linkbtn" id="beatsall">בחר הכל</button><button class="linkbtn" id="beatsnone">נקה בחירה</button></div>'
         : '<div class="toolnote">אין סצנות בתסריט. פתח את המסמך ורענן.</div>') : '');
+    var res = "";
+    if (beatsList.length) {
+      var lastSn = -1;
+      res = '<div class="beatres">' + beatsList.map(function (b, j) {
+        var head = b.sn !== lastSn ? '<div class="beatsc">סצנה ' + b.sn + (scenes[b.sn - 1] ? ' · ' + esc(scenes[b.sn - 1].h) : '') + '</div>' : '';
+        lastSn = b.sn;
+        return head + '<button class="beatitem' + (b.bm ? "" : " miss") + '" data-k="' + j + '"><span class="beatsw" style="background:' + beatCss(b.color) + '"></span>' +
+          '<span class="beatbody"><b>' + esc(b.name) + '</b>' + (b.note ? '<span>' + esc(b.note) + '</span>' : '') +
+          (b.bm ? '' : '<em>לא נמצא במסמך, הביט התמזג בקודם</em>') + '</span></button>';
+      }).join("") + '</div>';
+    }
     return '<div class="promptbox">' + pick +
       '<div class="toolh">הבקשה ל-Claude (בחלון התסריט)</div>' +
       '<textarea id="beatstext" readonly rows="5">' + esc(buildBeatsPrompt()) + '</textarea>' +
       '<button class="lb on" id="beatscopy">העתק</button> <span class="chgstat" id="beatscopied"></span>' +
       '<div class="toolh">תשובת Claude</div>' +
-      '<textarea id="beatsreply" rows="4" placeholder="הדבק כאן את הרשימה ש-Claude החזיר"></textarea>' +
-      '<button class="lb on" id="beatsapply">סמן במרקר</button> <button class="lb" id="beatsclear">נקה סימוני ביטים</button>' +
-      '<div class="toolnote" id="beatsstat"></div>' +
-      '<div class="toolnote">שורה לכל סימון: סוג | ציטוט. שינוי מצב כחול כהה, צחוק ורוד, התקרבות כחול, התרככות אפור.</div></div>';
+      '<textarea id="beatsreply" rows="4" placeholder="הדבק כאן את הרשימה ש-Claude החזיר">' + esc(beatsReplyText) + '</textarea>' +
+      '<button class="lb on" id="beatsapply">צבע ביטים</button> <button class="lb" id="beatsclear">נקה ביטים</button>' +
+      '<div class="toolnote" id="beatsstat">' + esc(beatsStat) + '</div>' +
+      (res ? '<div class="toolh">הביטים</div>' + res : '') +
+      '<div class="toolnote">כל ביט נצבע מהשורה שבה הוא מתחיל ועד הביט הבא, וכל ביט בצבע שונה מהקודם. לחיצה על ביט ברשימה קופצת אליו. אם מוצגים שינויים מול דראפט (מרקר צהוב), הסתר אותם קודם בלשונית דראפטים.</div></div>';
   }
   function applyBeats() {
-    var items = [], bad = 0;
-    ($("beatsreply").value || "").split(/\n/).forEach(function (line) {
-      var parts = line.split("|");
-      if (parts.length < 2) return;
-      var type = parts[0].trim().replace(/^[-*\d.\s]+/, "");
-      var q = parts.slice(1).join("|").trim().replace(/^"|"$/g, "").trim();
-      if (!BEAT_COLORS[type] || !q) { bad++; return; }
-      items.push({ text: q, color: BEAT_COLORS[type] });
+    var reply = $("beatsreply").value || "";
+    beatsReplyText = reply;
+    var beats = [], bad = 0, perScene = {};
+    reply.split(/\n/).forEach(function (line) {
+      if (line.indexOf("|") < 0) return;
+      var parts = line.split("|").map(function (x) { return x.trim(); });
+      var m = /(\d+)/.exec(parts[0] || "");
+      if (parts.length < 4 || !m) { bad++; return; }
+      var quote = parts.slice(3).join("|").replace(/^["“”׳']+|["“”׳']+$/g, "").trim();
+      if (!quote) { bad++; return; }
+      var sn = +m[1];
+      var n = perScene[sn] = (perScene[sn] || 0) + 1;
+      beats.push({ sn: sn, name: parts[1], note: parts[2], quote: quote, color: BEAT_PALETTE[(n - 1) % BEAT_PALETTE.length].c, bm: null });
     });
-    if (!items.length) { $("beatsstat").textContent = "לא נמצאו שורות בפורמט: סוג | ציטוט."; return; }
-    $("beatsstat").textContent = "מסמן…";
-    W.beatMark(items).then(function (r) {
-      $("beatsstat").textContent = "סומנו " + r.marked + (r.missing ? ", לא נמצא טקסט ל-" + r.missing : "") + (bad ? ", שורות לא מובנות: " + bad : "");
+    if (!beats.length) { beatsStat = "לא נמצאו שורות בפורמט: סצנה N | שם | מה משתנה | ציטוט."; renderList(); return; }
+    beatsStat = "צובע…"; $("beatsstat").textContent = beatsStat;
+    W.beatMark(beats).then(function (res) {
+      var miss = 0;
+      beats.forEach(function (b, j) { b.bm = res[j] || null; if (!b.bm) miss++; });
+      beatsList = beats;
+      if (W.saveBeats) W.saveBeats(beatsList);
+      beatsStat = "נצבעו " + (beats.length - miss) + " ביטים" + (miss ? ", " + miss + " לא נמצאו" : "") + (bad ? ", " + bad + " שורות לא מובנות" : "") + ".";
+      renderList();
     }).catch(showErr);
   }
+  document.addEventListener("input", function (e) { if (e.target && e.target.id === "beatsreply") beatsReplyText = e.target.value; });
   // the whole material (synopsis helper note + script text, scene by scene) is copied with the request, so Claude reads it at once
   function loadBundle(tries) {
     smartBundle = { ready: false, msg: "אוסף את הסצנות…", text: "", scenes: 0, missing: 0 };
@@ -1506,7 +1541,7 @@
         if (e.target.closest("#beatscopy")) { copyFrom("beatstext", "beatscopied"); return; }
         if (e.target.closest("#beatsapply")) { applyBeats(); return; }
         if (e.target.closest("#beatsclear")) {
-          W.beatClear().then(function () { $("beatsstat").textContent = "הסימונים נוקו."; }).catch(showErr);
+          W.beatClear().then(function () { beatsList = []; if (W.saveBeats) W.saveBeats([]); beatsStat = "הביטים נוקו."; renderList(); }).catch(showErr);
           return;
         }
         if (e.target.closest("#beatsall") || e.target.closest("#beatsnone")) {
@@ -1517,6 +1552,8 @@
           $("beatscount").textContent = beatsCount();
           return;
         }
+        var bi = e.target.closest(".beatitem");
+        if (bi) { var bb = beatsList && beatsList[+bi.dataset.k]; if (bb && bb.bm) W.gotoMark(bb.bm).catch(showErr); return; }
         if (e.target.closest("#beatsfold")) { beatsPickOpen = !beatsPickOpen; renderList(); return; }
         if (e.target.classList && e.target.classList.contains("beatcb")) {
           beatSel[+e.target.dataset.i] = e.target.checked;
