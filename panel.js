@@ -311,7 +311,8 @@
       { cmd: "smartclear", t: "סיום השוואה", d: "מוחק את הערות העזר. הערות ההשוואה נשארות." }
     ], note: "1. לוחצים על כיוון. 2. מעתיקים את הבקשה שמופיעה כאן. 3. מדביקים ל-Claude ב-Word (בחלון של המסמך שמקבל את ההערות). 4. ההבדלים מופיעים בלשונית הערות." },
     { h: "ניתוח ביטים", items: [
-      { cmd: "beats", t: "ניתוח ביטים בסצנות", d: "בוחרים סצנות. Claude מזהה את המנעד הרגשי ושינויי המצב, והסימונים נכנסים למרקר בצבע לכל סוג." }
+      { cmd: "beats", t: "ניתוח ביטים בסצנות", d: "בוחרים סצנות. Claude מחלק כל סצנה לביטים לפי התפניות בדינמיקה, וכותב מה כל דמות באמת רוצה להגיד." },
+      { cmd: "acts", t: "סימון פעולות", d: "Claude מזהה כל פעולה פיזית של הדמויות בסצנות שבחרת, וכל דמות מסומנת במרקר בצבע משלה." }
     ] },
     { h: "דראפטים", items: [
       { cmd: "force", t: "דראפט חדש עכשיו", d: "שומר דראפט חדש בלי לחכות לשינוי מהותי." },
@@ -336,11 +337,10 @@
   var beatsReplyText = "";
   var beatsStat = "";
   var beatsSetupOpen = null;   // null = decide from the list: collapsed when beats are already marked
-  // light highlight colours only, so the text stays readable; yellow is left for the draft changes
+  // light highlight colours only, so the text stays readable; yellow and green are left for the actions
   var BEAT_PALETTE = [
     { c: "#00FFFF", css: "#00FFFF" },
     { c: "#FF00FF", css: "#FF00FF" },
-    { c: "#00FF00", css: "#00FF00" },
     { c: "#C0C0C0", css: "#C0C0C0" }
   ];
   function beatCss(c) { var m = BEAT_PALETTE.filter(function (x) { return x.c === c; })[0]; return m ? m.css : "#ddd"; }
@@ -350,14 +350,23 @@
     return BEATS_PROMPT + (names || "(עוד לא נבחרו סצנות)");
   }
   function beatsCount() { return Object.keys(beatSel).filter(function (k) { return beatSel[k]; }).length; }
-  function beatsBox() {
-    if (beatsList === null) beatsList = (W.loadBeats && W.loadBeats()) || [];
+  // one scene picker shared by the beats and the actions (only one of the two boxes is open at a time)
+  function pickerHtml() {
     var rows = scenes.map(function (s, i) {
       return '<label class="beatrow"><input type="checkbox" class="beatcb" data-i="' + i + '"' + (beatSel[i] ? " checked" : "") + '><span><b>' + (i + 1) + '.</b> ' + esc(s.h || ("סצנה " + (i + 1))) + '</span></label>';
     }).join("");
-    var pick = '<button class="beatfold" id="beatsfold">' + (beatsPickOpen ? "▴" : "▾") + ' בחירת סצנות · נבחרו <span id="beatscount">' + beatsCount() + '</span> מתוך ' + scenes.length + '</button>' +
+    return '<button class="beatfold" id="beatsfold">' + (beatsPickOpen ? "▴" : "▾") + ' בחירת סצנות · נבחרו <span id="beatscount">' + beatsCount() + '</span> מתוך ' + scenes.length + '</button>' +
       (beatsPickOpen ? (scenes.length ? '<div class="beatlist">' + rows + '</div><div class="beatbar"><button class="linkbtn" id="beatsall">בחר הכל</button><button class="linkbtn" id="beatsnone">נקה בחירה</button></div>'
         : '<div class="toolnote">אין סצנות בתסריט. פתח את המסמך ורענן.</div>') : '');
+  }
+  function refreshPrompts() {
+    var bt = $("beatstext"); if (bt) bt.value = buildBeatsPrompt();
+    var at = $("actstext"); if (at) at.value = buildActsPrompt();
+    var bc = $("beatscount"); if (bc) bc.textContent = beatsCount();
+  }
+  function beatsBox() {
+    if (beatsList === null) beatsList = (W.loadBeats && W.loadBeats()) || [];
+    var pick = pickerHtml();
     var res = "";
     if (beatsList.length) {
       var lastSn = -1;
@@ -417,7 +426,76 @@
       renderList();
     });
   }
-  document.addEventListener("input", function (e) { if (e.target && e.target.id === "beatsreply") beatsReplyText = e.target.value; });
+  document.addEventListener("input", function (e) {
+    if (!e.target) return;
+    if (e.target.id === "beatsreply") beatsReplyText = e.target.value;
+    if (e.target.id === "actsreply") actsReplyText = e.target.value;
+  });
+  // ---------- actions: Claude lists every physical action per character; each character gets its own highlight colour
+  var actsOpen = false;
+  var actsData = null;         // {map:{name:colourIndex}, chars:[{name, c, n}], miss} kept in the document settings
+  var actsReplyText = "";
+  var actsStat = "";
+  var actsSetupOpen = null;
+  var ACT_PALETTE = ["#FFFF00", "#00FF00", "#FF0000", "#808000", "#800080", "#008080"];
+  var ACTS_PROMPT = "סימון פעולות בסצנות. פתח את המסמך הפתוח ב-Word ומצא את הסצנות שברשימה למטה לפי הכותרת שלהן. עבור על כל סצנה שורה אחרי שורה, ומצא כל פעולה פיזית של דמות: כל מה שדמות עושה בגוף (מוציאה, לובש, מתקרבת, זורקת, מחבקת, יוצאת), בשורות התיאור ובהערות הבימוי. אל תסמן דיאלוג, ואל תסמן תיאור של מקום או חפץ בלי פעולה. אל תשנה את המסמך ואל תכתוב הערות. החזר רק רשימה, שורה לכל פעולה, לפי הסדר, בפורמט:\nסצנה N | שם הדמות | הפעולה כפי שהיא כתובה\nהפעולה: המילים של הפעולה בלבד, מילה במילה מהמסמך, 2 עד 10 מילים (למשל: מוציאה גופייה מאחד מארגזי הבגדים). שם הדמות בדיוק כמו בתסריט. אל תשתמש בסימן | בתוך השדות.\n\nהסצנות:\n";
+  function buildActsPrompt() {
+    var names = scenes.map(function (s, i) { return beatSel[i] ? "- סצנה " + (i + 1) + ": " + (s.h || "") : ""; }).filter(Boolean).join("\n");
+    return ACTS_PROMPT + (names || "(עוד לא נבחרו סצנות)");
+  }
+  function actsBox() {
+    if (actsData === null) actsData = (W.loadActs && W.loadActs()) || { map: {}, chars: [], miss: 0 };
+    var chars = actsData.chars || [];
+    var legend = chars.length ? '<div class="beatres">' + chars.map(function (c) {
+      return '<div class="actrow"><span class="beatsw" style="background:' + c.c + '"></span><b>' + esc(c.name) + '</b><span>' + c.n + ' פעולות</span></div>';
+    }).join("") + (actsData.miss ? '<div class="toolnote">' + actsData.miss + ' פעולות לא נמצאו בטקסט.</div>' : '') + '</div>' : '';
+    if (actsSetupOpen === null) actsSetupOpen = !chars.length;
+    if (!actsSetupOpen && chars.length) {
+      return '<div class="promptbox"><div class="beattop"><button class="lb" id="actsnew">▾ סימון חדש</button><button class="lb" id="actsclear">נקה פעולות</button></div>' + legend + '</div>';
+    }
+    return '<div class="promptbox">' + pickerHtml() +
+      '<div class="toolh">הבקשה ל-Claude (בחלון התסריט)</div>' +
+      '<textarea id="actstext" readonly rows="5">' + esc(buildActsPrompt()) + '</textarea>' +
+      '<button class="lb on" id="actscopy">העתק</button> <span class="chgstat" id="actscopied"></span>' +
+      '<div class="toolh">תשובת Claude</div>' +
+      '<textarea id="actsreply" rows="4" placeholder="הדבק כאן את הרשימה ש-Claude החזיר">' + esc(actsReplyText) + '</textarea>' +
+      '<button class="lb on" id="actsapply">סמן פעולות</button> <button class="lb" id="actsclear">נקה פעולות</button>' +
+      '<div class="toolnote" id="actsstat">' + esc(actsStat) + '</div>' +
+      (legend ? '<div class="toolh">הדמויות</div>' + legend : '') +
+      '<div class="toolnote">כל דמות מסומנת בצבע משלה: הראשונה בצהוב, השנייה בירוק, ואחריהן צבעים נוספים. סימון פעולה על טקסט של ביט מחליף שם את צבע הביט, ו"נקה פעולות" מחזיר אותו.</div></div>';
+  }
+  function applyActs() {
+    var reply = $("actsreply").value || "";
+    actsReplyText = reply;
+    var map = (actsData && actsData.map) || {}, next = 0, items = [], bad = 0;
+    Object.keys(map).forEach(function (k) { next = Math.max(next, map[k] + 1); });
+    reply.split(/\n/).forEach(function (line) {
+      if (line.indexOf("|") < 0) return;
+      var parts = line.split("|").map(function (x) { return x.trim(); });
+      var m = /(\d+)/.exec(parts[0] || "");
+      var ch = (parts[1] || "").replace(/[:.]$/, "").trim();
+      var quote = parts.slice(2).join("|").replace(/^["“”׳']+|["“”׳']+$/g, "").trim();
+      if (parts.length < 3 || !m || !ch || !quote) { bad++; return; }
+      if (map[ch] === undefined) map[ch] = next++;
+      items.push({ sn: +m[1], ch: ch, quote: quote, color: ACT_PALETTE[map[ch] % ACT_PALETTE.length] });
+    });
+    if (!items.length) { actsStat = "לא נמצאו שורות בפורמט: סצנה N | דמות | פעולה."; renderList(); return; }
+    actsStat = "מסמן…"; $("actsstat").textContent = actsStat;
+    W.actMark(items).then(function (res) {
+      var counts = {}, miss = 0;
+      items.forEach(function (it, k) { if (res[k]) counts[it.ch] = (counts[it.ch] || 0) + 1; else miss++; });
+      var chars = Object.keys(map).filter(function (n) { return counts[n]; }).sort(function (a, b) { return map[a] - map[b]; })
+        .map(function (n) { return { name: n, c: ACT_PALETTE[map[n] % ACT_PALETTE.length], n: counts[n] }; });
+      actsData = { map: map, chars: chars, miss: miss };
+      if (W.saveActs) W.saveActs(actsData);
+      if (chars.length) actsSetupOpen = false;
+      actsStat = "סומנו " + (items.length - miss) + " פעולות" + (miss ? ", " + miss + " לא נמצאו" : "") + (bad ? ", " + bad + " שורות לא מובנות" : "") + ".";
+      renderList();
+    }).catch(function (er) {
+      actsStat = "הסימון נעצר: " + (er && er.message ? er.message : er) + ". נסה שוב, ואם זה חוזר שלח לי צילום.";
+      renderList();
+    });
+  }
   // the whole material (synopsis helper note + script text, scene by scene) is copied with the request, so Claude reads it at once
   function loadBundle(tries) {
     smartBundle = { ready: false, msg: "אוסף את הסצנות…", text: "", scenes: 0, missing: 0 };
@@ -900,6 +978,7 @@
           esc(toolPending === it.cmd ? "נשלח… (עד 2 שניות)" : it.d) + '</span></button>';
       }).join("") + (g.note ? '<div class="toolnote">' + esc(g.note) + '</div>' : "") +
         (g.h === "ניתוח ביטים" && beatsOpen ? beatsBox() : "") +
+        (g.h === "ניתוח ביטים" && actsOpen ? actsBox() : "") +
         (g.h.indexOf("השוואה חכמה") === 0 && smartPrompt ? '<div class="promptbox"><div class="toolh">הבקשה ל-Claude (' + (smartPrompt === "s2t" ? "בחלון התסריט" : "בחלון הסינופסיס") + ')</div>' +
           (smartPrompt === "s2t" && !smartBundle.ready ? '<div class="toolnote">' + esc(smartBundle.msg || "אוסף את הסצנות…") + '</div>' :
           '<textarea id="smarttext" readonly rows="5">' + esc(smartPrompt === "s2t" ? PROMPTS.s2t + "\n\n===== החומר =====\n\n" + smartBundle.text : PROMPTS[smartPrompt]) + '</textarea>' +
@@ -1554,22 +1633,28 @@
           var allOn = !!e.target.closest("#beatsall");
           scenes.forEach(function (s, i) { beatSel[i] = allOn; });
           document.querySelectorAll(".beatcb").forEach(function (cb) { cb.checked = allOn; });
-          $("beatstext").value = buildBeatsPrompt();
-          $("beatscount").textContent = beatsCount();
+          refreshPrompts();
           return;
         }
         if (e.target.closest("#beatsnew")) { beatsSetupOpen = true; renderList(); return; }
+        if (e.target.closest("#actsnew")) { actsSetupOpen = true; renderList(); return; }
+        if (e.target.closest("#actscopy")) { copyFrom("actstext", "actscopied"); return; }
+        if (e.target.closest("#actsapply")) { applyActs(); return; }
+        if (e.target.closest("#actsclear")) {
+          W.actClear().then(function () { actsData = { map: {}, chars: [], miss: 0 }; if (W.saveActs) W.saveActs(actsData); actsStat = "הפעולות נוקו."; actsSetupOpen = true; renderList(); }).catch(showErr);
+          return;
+        }
         var bi = e.target.closest(".beatitem");
         if (bi) { var bb = beatsList && beatsList[+bi.dataset.k]; if (bb && bb.bm) W.gotoMark(bb.bm).catch(showErr); return; }
         if (e.target.closest("#beatsfold")) { beatsPickOpen = !beatsPickOpen; renderList(); return; }
         if (e.target.classList && e.target.classList.contains("beatcb")) {
           beatSel[+e.target.dataset.i] = e.target.checked;
-          $("beatstext").value = buildBeatsPrompt();
-          $("beatscount").textContent = beatsCount();
+          refreshPrompts();
           return;
         }
         var tb = e.target.closest(".toolbtn");
-        if (tb && tb.dataset.cmd === "beats") { beatsOpen = !beatsOpen; renderList(); return; }
+        if (tb && tb.dataset.cmd === "beats") { beatsOpen = !beatsOpen; if (beatsOpen) actsOpen = false; renderList(); return; }
+        if (tb && tb.dataset.cmd === "acts") { actsOpen = !actsOpen; if (actsOpen) beatsOpen = false; renderList(); return; }
         if (tb) {
           if (tb.dataset.cmd === "smart_s2t") { smartPrompt = "s2t"; setTimeout(function () { loadBundle(10); }, 2500); }
           else if (tb.dataset.cmd === "smart_t2s") smartPrompt = "t2s";

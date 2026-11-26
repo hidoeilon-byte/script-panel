@@ -19,6 +19,20 @@
     };
   }
 
+  // colour <-> bookmark name: "#00ffff" -> "00FFFF"
+  function hexOf(c) { return String(c || "").replace("#", "").toUpperCase().slice(0, 6); }
+  // put back the highlight of every bookmark whose name carries a colour
+  function paintMarks(ctx, names, re) {
+    names.forEach(function (nm) {
+      var m = re.exec(nm);
+      if (m) ctx.document.getBookmarkRangeOrNullObject(nm).font.highlightColor = "#" + m[1];
+    });
+  }
+  function textNorm(t) {
+    return String(t || "").replace(/[\u200e\u200f\u202a-\u202e]/g, "").replace(/[“”״]/g, '"').replace(/[‘’׳]/g, "'")
+      .replace(/[–—]/g, "-").replace(/\s+/g, " ").trim();
+  }
+
   window.WordBridge = {
     ready: function () {
       return new Promise(function (res) {
@@ -682,11 +696,12 @@
               if (en < st || st > bd.to) return;
               var r = ps.items[st].getRange("Whole").expandTo(ps.items[en].getRange("Whole"));
               r.font.highlightColor = beats[j].color;
-              var nm = "zBeat" + stamp + "_" + j;
+              var nm = "zBeat" + hexOf(beats[j].color) + "_" + stamp + "_" + j;
               r.insertBookmark(nm);
               results[j] = nm;
             });
           });
+          paintMarks(ctx, names.value, /^zAct([0-9A-F]{6})_/);
           return ctx.sync().then(function () { return results; });
         });
       });
@@ -699,6 +714,75 @@
       try { var st = Office.context.document.settings; st.set("scenePanel.beats", list); st.saveAsync(); } catch (e) {}
     },
 
+    // actions: items = [{sn, quote, color}]; each action is searched inside the paragraph of its scene that holds it.
+    // returns true/false per item
+    actMark: function (items) {
+      return run(function (ctx) {
+        var body = ctx.document.body;
+        var names = body.getRange("Whole").getBookmarks(true, true);
+        var ps = body.paragraphs;
+        ps.load("items/style,items/text");
+        return ctx.sync().then(function () {
+          names.value.filter(function (nm) { return /^zAct/.test(nm); }).forEach(function (nm) {
+            ctx.document.getBookmarkRangeOrNullObject(nm).font.highlightColor = null;
+            ctx.document.deleteBookmark(nm);
+          });
+          paintMarks(ctx, names.value, /^zBeat([0-9A-F]{6})_/);
+          var sr = sceneRanges(ps);
+          var texts = ps.items.map(function (p) { return textNorm(p.text); });
+          var searches = items.map(function (it) {
+            var k = it.sn - 1, q = textNorm(it.quote);
+            if (k < 0 || k >= sr.idx.length || !q) return null;
+            var from = sr.idx[k] + 1, to = k + 1 < sr.idx.length ? sr.idx[k + 1] - 1 : ps.items.length - 1;
+            var short = q.split(" ").slice(0, 4).join(" ");
+            for (var i = from; i <= to; i++) {
+              if (texts[i] && (texts[i].indexOf(q) >= 0 || texts[i].indexOf(short) >= 0)) {
+                var full = ps.items[i].search(it.quote.slice(0, 250), { matchCase: false });
+                var part = ps.items[i].search(short, { matchCase: false });
+                full.load("items"); part.load("items");
+                return { full: full, part: part };
+              }
+            }
+            return null;
+          });
+          return ctx.sync().then(function () {
+            var stamp = String(Date.now()).slice(-6), out = items.map(function () { return false; });
+            items.forEach(function (it, k) {
+              var sch = searches[k];
+              if (!sch) return;
+              var h = sch.full.items[0] || sch.part.items[0];
+              if (!h) return;
+              h.font.highlightColor = it.color;
+              h.insertBookmark("zAct" + hexOf(it.color) + "_" + stamp + "_" + k);
+              out[k] = true;
+            });
+            return ctx.sync().then(function () { return out; });
+          });
+        });
+      });
+    },
+
+    actClear: function () {
+      return run(function (ctx) {
+        var names = ctx.document.body.getRange("Whole").getBookmarks(true, true);
+        return ctx.sync().then(function () {
+          names.value.filter(function (nm) { return /^zAct/.test(nm); }).forEach(function (nm) {
+            ctx.document.getBookmarkRangeOrNullObject(nm).font.highlightColor = null;
+            ctx.document.deleteBookmark(nm);
+          });
+          paintMarks(ctx, names.value, /^zBeat([0-9A-F]{6})_/);
+          return ctx.sync();
+        });
+      });
+    },
+
+    loadActs: function () {
+      try { return Office.context.document.settings.get("scenePanel.acts") || null; } catch (e) { return null; }
+    },
+    saveActs: function (data) {
+      try { var st = Office.context.document.settings; st.set("scenePanel.acts", data); st.saveAsync(); } catch (e) {}
+    },
+
     beatClear: function () {
       return run(function (ctx) {
         var names = ctx.document.body.getRange("Whole").getBookmarks(true, true);
@@ -707,6 +791,7 @@
             ctx.document.getBookmarkRangeOrNullObject(nm).font.highlightColor = null;
             ctx.document.deleteBookmark(nm);
           });
+          paintMarks(ctx, names.value, /^zAct([0-9A-F]{6})_/);
           return ctx.sync();
         });
       });
