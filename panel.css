@@ -416,3 +416,5 @@ body.noheader #styles, body.noheader .status, body.noheader #locbox { display: n
 .beatbody { display:flex; flex-direction:column; gap:2px; font-size:13px; line-height:1.4; }
 .beatbody span { color:#555; }
 .beatbody em { color:#b00; font-style:normal; font-size:12px; }
+.beatsub { display:flex; flex-direction:column; gap:3px; margin-top:4px; padding-top:4px; border-top:1px dashed #e0e0e0; }
+.beatsub i { font-style:normal; color:#333; }
