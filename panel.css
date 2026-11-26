@@ -432,3 +432,9 @@ body.noheader #styles, body.noheader .status, body.noheader #locbox { display: n
 .charsc { display:flex; flex-direction:column; gap:2px; width:100%; text-align:right; background:#fafafa; border:1px solid #eee; border-radius:8px; padding:6px 8px; margin-bottom:5px; font:inherit; font-size:13px; line-height:1.4; cursor:pointer; }
 .charsc:hover { border-color:#ccc; }
 .charsc i { font-style:normal; color:#888; }
+
+/* the analysis boxes have a white background: their text is always black, also when Word runs in dark mode */
+.charcard, .charhead, .charbody, .charf, .charsc, .beatitem, .beatbody, .beatsub i, .actrow { color:#000; }
+.charhead span, .charf b, .beatbody span, .charsc i, .actrow span:last-child { color:#333; }
+.actrow { background:#fff; border-radius:6px; }
+.beatbody em { color:#b00; }
