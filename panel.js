@@ -1183,6 +1183,7 @@
               : (sc.s ? '<div class="srsum" data-i="' + i + '">' + esc(sc.s) + '</div>' : '<div class="srsum srempty" data-i="' + i + '">לחץ כדי לכתוב תקציר</div>');
             var mkc = sc.m ? markById(sc.m) : null;
             return '<div class="strow' + (mkc ? " marked" : "") + '" draggable="true" data-i="' + i + '"' + (mkc ? ' style="border-inline-start:6px solid ' + mkc.c + '"' : "") + '>' +
+              '<span class="scask" data-sn="' + (i + 1) + '" title="שאל את Claude רק על הסצנה הזו">✳</span>' +
               '<span class="srnum">' + (i + 1) + '</span><span class="srhead">' + esc(sc.h) + '</span>' +
               sumPart + '</div>';
           }).join("");

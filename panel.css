@@ -447,3 +447,5 @@ body.noheader #styles, body.noheader .status, body.noheader #locbox { display: n
 .scask.ok { color:#1a7f37; background:rgba(26,127,55,.15); }
 .beatsc .scask, .charsc .scask { float:left; margin-inline-start:6px; }
 .scene .row { padding-left: 24px; }
+.strow { position: relative; padding-left: 28px; }
+.strow > .scask { position:absolute; top:6px; left:6px; z-index:2; }
